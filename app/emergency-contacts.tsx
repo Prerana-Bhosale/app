@@ -15,7 +15,7 @@ import { Text } from '@/components/ui/Text';
 import { captureException } from '@/config/sentry';
 import { COLORS } from '@/constants/colors';
 import { PREDEFINED_EMERGENCY_NUMBERS } from '@/constants/emergency-numbers';
-import { ICON_SIZE } from '@/constants/ui';
+import { DANGER_ROW_HITSLOP, ICON_SIZE } from '@/constants/ui';
 import {
   trackEmergencyCallPlaced,
   trackEmergencyContactChange,
@@ -219,6 +219,7 @@ export default function EmergencyContactsScreen(): React.JSX.Element {
                 accessibilityRole="button"
                 accessibilityLabel={t('emergency.callNow')}
                 className="h-9 w-9 items-center justify-center rounded-full bg-forest-green"
+                hitSlop={12}
               >
                 <Ionicons name="call" size={ICON_SIZE.CHEVRON} color={COLORS.WHITE} />
               </Pressable>
@@ -255,6 +256,7 @@ export default function EmergencyContactsScreen(): React.JSX.Element {
                   accessibilityRole="button"
                   accessibilityLabel={t('emergency.callNow')}
                   className="h-9 w-9 items-center justify-center rounded-full bg-forest-green"
+                  hitSlop={12}
                 >
                   <Ionicons name="call" size={ICON_SIZE.CHEVRON} color={COLORS.WHITE} />
                 </Pressable>
@@ -262,6 +264,7 @@ export default function EmergencyContactsScreen(): React.JSX.Element {
                   onPress={() => confirmDelete(contact)}
                   accessibilityRole="button"
                   accessibilityLabel={t('emergency.deleteContact')}
+                  hitSlop={DANGER_ROW_HITSLOP}
                 >
                   <MaterialIcons name="delete-outline" size={ICON_SIZE.ROW} color={COLORS.STONE} />
                 </Pressable>
