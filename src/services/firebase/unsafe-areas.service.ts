@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   increment,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -63,19 +64,29 @@ export async function reportUnsafeArea(
 }
 
 /**
- * Subscribes to every unsafe area, newest first. Returns the unsubscribe
- * function.
+ * Subscribes to unsafe areas, newest first, bounded by query limit.
+ * Returns the unsubscribe function.
  *
  * Guests are never signed in to Firebase Auth (`isGuest` is a local-only
  * flag), so this listener runs unauthenticated for them. If Firestore rules
  * reject that read, `onSnapshot` reports it through the error callback rather
- * than throwing — without one, that error is unhandled and crashes the app.
- * Degrade to an empty list instead of taking the screen down.
+ * than throwing.
+ *
+ * To prevent momentary offline network drops or connection handovers from
+ * wiping all visible safety hazard pins from the user's map (BUG-065, NEW-005),
+ * existing loaded markers are preserved instead of cleared with an empty array.
  * @phase Phase 4 — Location & Maps
  */
-export function subscribeToUnsafeAreas(onUpdate: (areas: UnsafeArea[]) => void): () => void {
+export function subscribeToUnsafeAreas(
+  onUpdate: (areas: UnsafeArea[]) => void,
+  onError?: (error: unknown) => void,
+): () => void {
   return onSnapshot(
-    query(areasCollection(), orderBy('createdAt', 'desc')),
+    query(
+      areasCollection(),
+      orderBy('createdAt', 'desc'),
+      limit(APP_CONFIG.UNSAFE_AREA_QUERY_LIMIT),
+    ),
     (snapshot) => {
       onUpdate(
         snapshot.docs.map((document) => ({
@@ -86,7 +97,7 @@ export function subscribeToUnsafeAreas(onUpdate: (areas: UnsafeArea[]) => void):
     },
     (error) => {
       console.error('subscribeToUnsafeAreas failed:', error);
-      onUpdate([]);
+      onError?.(error);
     },
   );
 }

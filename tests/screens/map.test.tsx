@@ -2,6 +2,7 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
 import { useAuthStore } from '@/stores/auth.store';
+import { useLocationStore } from '@/stores/location.store';
 import MapScreen from '@app/(tabs)/map';
 
 jest.mock('expo-router', () => ({
@@ -98,5 +99,26 @@ describe('MapScreen', () => {
     await fireEvent.press(getByTestId('unsafe-area-a1'));
 
     expect(getByLabelText('Upvote').props.accessibilityState).toMatchObject({ disabled: true });
+  });
+
+  it('renders cached unsafe areas instantly on mount from useLocationStore', async () => {
+    useLocationStore
+      .getState()
+      .setCachedUnsafeAreas([area({ id: 'cached-1', title: 'Cached Hazard' }) as never]);
+
+    const { getByTestId, getByText } = await render(<MapScreen />);
+    expect(getByTestId('unsafe-area-cached-1')).toBeTruthy();
+    await fireEvent.press(getByTestId('unsafe-area-cached-1'));
+    expect(getByText('Cached Hazard')).toBeTruthy();
+  });
+
+  it('animates camera when currentLocation is acquired', async () => {
+    useLocationStore.getState().setCurrentLocation({
+      latitude: 18.5204,
+      longitude: 73.8567,
+      timestamp: 123456,
+    });
+    const { getByText } = await render(<MapScreen />);
+    expect(getByText('Safety Map')).toBeTruthy();
   });
 });

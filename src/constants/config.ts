@@ -46,6 +46,8 @@ export const APP_CONFIG = {
   MAX_EVIDENCE_RECORDING_MINUTES: 30,
   MAX_COMMUNITY_IMAGE_MB: 5,
   UNSAFE_AREA_SEARCH_RADIUS_KM: 50,
+  /** Maximum number of unsafe area pins fetched for map viewport. */
+  UNSAFE_AREA_QUERY_LIMIT: 100,
   CACHE_EXPIRY_HOURS: 24,
   /** Newest-first cap on the Information Hub news feed. */
   NEWS_FEED_LIMIT: 30,

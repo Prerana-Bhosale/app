@@ -119,6 +119,30 @@ describe('location.store', () => {
     expect(useLocationStore.getState().liveLocationSessionId).toBeNull();
   });
 
+  it('stores and clears cached unsafe areas', () => {
+    const area = {
+      id: 'a1',
+      reportedBy: 'u1',
+      latitude: 19.0,
+      longitude: 72.8,
+      radiusMeters: 200,
+      title: 'Dark lane',
+      description: 'Poor light',
+      category: 'poorly_lit' as const,
+      status: 'approved' as const,
+      pinColor: 'red' as const,
+      upvotes: 0,
+      downvotes: 0,
+      voterIds: [],
+      createdAt: null as never,
+    };
+    useLocationStore.getState().setCachedUnsafeAreas([area]);
+    expect(useLocationStore.getState().cachedUnsafeAreas).toEqual([area]);
+
+    useLocationStore.getState().reset();
+    expect(useLocationStore.getState().cachedUnsafeAreas).toEqual([]);
+  });
+
   it('reset clears everything', () => {
     useLocationStore.getState().setLiveLocationActive(true, 'session-1');
     useLocationStore.getState().reset();

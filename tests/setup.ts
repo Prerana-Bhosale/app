@@ -135,6 +135,21 @@ jest.mock('react-native-maps', () => {
   const RN = jest.requireActual<typeof import('react-native')>('react-native');
   const Passthrough = (props: { children?: React.ReactNode }): React.ReactElement =>
     ReactActual.createElement(RN.View, null, props.children);
+  const MapView = ReactActual.forwardRef(
+    (
+      props: { children?: React.ReactNode; onPanDrag?: () => void },
+      ref: React.ForwardedRef<{
+        animateToRegion: jest.Mock;
+        animateCamera: jest.Mock;
+      }>,
+    ): React.ReactElement => {
+      ReactActual.useImperativeHandle(ref, () => ({
+        animateToRegion: jest.fn(),
+        animateCamera: jest.fn(),
+      }));
+      return ReactActual.createElement(RN.View, { onTouchMove: props.onPanDrag }, props.children);
+    },
+  );
   // Pressable so a test can tap a pin by its testID.
   const Marker = (props: {
     children?: React.ReactNode;
@@ -148,7 +163,7 @@ jest.mock('react-native-maps', () => {
     );
   return {
     __esModule: true,
-    default: Passthrough,
+    default: MapView,
     Marker,
     Circle: Passthrough,
     PROVIDER_GOOGLE: 'google',

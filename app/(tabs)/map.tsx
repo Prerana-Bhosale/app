@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
@@ -38,6 +38,7 @@ import {
 } from '@/services/firebase/unsafe-areas.service';
 import { getFreshLocation } from '@/services/location.service';
 import { useAuthStore } from '@/stores/auth.store';
+import { useLocationStore } from '@/stores/location.store';
 import type { UnsafeArea, UnsafeAreaCategory } from '@/types/location.types';
 import { locationErrorKey } from '@/utils/location.utils';
 
@@ -69,7 +70,10 @@ export default function MapScreen(): React.JSX.Element {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const [unsafeAreas, setUnsafeAreas] = useState<UnsafeArea[]>([]);
+  const cachedUnsafeAreas = useLocationStore((state) => state.cachedUnsafeAreas);
+  const setCachedUnsafeAreas = useLocationStore((state) => state.setCachedUnsafeAreas);
+
+  const [unsafeAreas, setUnsafeAreas] = useState<UnsafeArea[]>(cachedUnsafeAreas);
   // Only the id is kept: the card reads the area from the live list, so its
   // vote count and "already voted" state follow every snapshot instead of
   // freezing at the moment the pin was tapped (BUG-015).
@@ -78,6 +82,9 @@ export default function MapScreen(): React.JSX.Element {
   const [legendVisible, setLegendVisible] = useState(false);
   const [isReportModalVisible, setReportModalVisible] = useState(false);
   const [isSubmitting, setSubmitting] = useState(false);
+
+  const mapRef = useRef<MapView | null>(null);
+  const hasCenteredOnUserRef = useRef(false);
 
   const selectedArea = useMemo(
     () => unsafeAreas.find((area) => area.id === selectedAreaId) ?? null,
@@ -91,8 +98,32 @@ export default function MapScreen(): React.JSX.Element {
   }, [requestPermission]);
 
   useEffect(() => {
-    const unsubscribe = subscribeToUnsafeAreas(setUnsafeAreas);
+    const unsubscribe = subscribeToUnsafeAreas((areas) => {
+      setUnsafeAreas(areas);
+      setCachedUnsafeAreas(areas);
+    });
     return unsubscribe;
+  }, [setCachedUnsafeAreas]);
+
+  // Smoothly glide camera from fallback coordinates to actual GPS location
+  // upon initial acquisition, without overriding manual map panning (BUG-064).
+  useEffect(() => {
+    if (currentLocation && !hasCenteredOnUserRef.current) {
+      hasCenteredOnUserRef.current = true;
+      mapRef.current?.animateToRegion(
+        {
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          latitudeDelta: APP_CONFIG.MAP_DEFAULT_LATITUDE_DELTA,
+          longitudeDelta: APP_CONFIG.MAP_DEFAULT_LONGITUDE_DELTA,
+        },
+        800,
+      );
+    }
+  }, [currentLocation]);
+
+  const handlePanDrag = useCallback((): void => {
+    hasCenteredOnUserRef.current = true;
   }, []);
 
   const initialRegion: Region = useMemo(
@@ -194,11 +225,13 @@ export default function MapScreen(): React.JSX.Element {
     <ErrorBoundary>
       <View className="flex-1">
         <MapView
+          ref={mapRef}
           provider={PROVIDER_GOOGLE}
           style={styles.map}
           showsUserLocation
           showsMyLocationButton
           initialRegion={initialRegion}
+          onPanDrag={handlePanDrag}
           // Android's My Location button defaults to top-right (rendering
           // under the status bar without this); iOS's defaults to
           // bottom-right (overlapping the report FAB there). `mapPadding`

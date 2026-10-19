@@ -3,6 +3,7 @@ import {
   arrayUnion,
   getDoc,
   increment,
+  limit,
   onSnapshot,
   updateDoc,
 } from '@react-native-firebase/firestore';
@@ -22,6 +23,7 @@ jest.mock('@react-native-firebase/firestore', () => ({
   updateDoc: jest.fn(() => Promise.resolve()),
   query: jest.fn((ref: unknown) => ref),
   orderBy: jest.fn((field: string) => ({ orderBy: field })),
+  limit: jest.fn((n: number) => ({ limit: n })),
   onSnapshot: jest.fn((_ref: unknown, cb: (snap: unknown) => void) => {
     cb({ docs: [{ id: 'area-9', data: () => ({ title: 'Dark lane', pinColor: 'orange' }) }] });
     return jest.fn();
@@ -68,12 +70,13 @@ describe('unsafe-areas.service', () => {
     const unsubscribe = subscribeToUnsafeAreas(onUpdate);
 
     expect(typeof unsubscribe).toBe('function');
+    expect(limit).toHaveBeenCalledWith(100);
     expect(onUpdate).toHaveBeenCalledWith([
       { id: 'area-9', title: 'Dark lane', pinColor: 'orange' },
     ]);
   });
 
-  it('subscribeToUnsafeAreas degrades to an empty list on a listener error (e.g. an unauthenticated guest)', () => {
+  it('subscribeToUnsafeAreas reports error via callback and does not wipe markers on listener error', () => {
     jest.mocked(onSnapshot).mockImplementationOnce(((
       _ref: unknown,
       _cb: (snap: unknown) => void,
@@ -84,9 +87,11 @@ describe('unsafe-areas.service', () => {
     }) as never);
 
     const onUpdate = jest.fn();
-    subscribeToUnsafeAreas(onUpdate);
+    const onError = jest.fn();
+    subscribeToUnsafeAreas(onUpdate, onError);
 
-    expect(onUpdate).toHaveBeenCalledWith([]);
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith(expect.any(Error));
     expect(errorSpy).toHaveBeenCalled();
   });
 
