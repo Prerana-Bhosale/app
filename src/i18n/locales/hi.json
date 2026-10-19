@@ -411,9 +411,11 @@
     },
     "photoTooLarge": "यह फ़ोटो {{mb}} MB से बड़ी है। कृपया छोटी फ़ोटो चुनें।",
     "photoUploadFailedTitle": "फ़ोटो अपलोड नहीं हुई",
-    "photoUploadFailedBody": "{{total}} में से {{failed}} फ़ोटो अपलोड नहीं हो सकीं। कनेक्शन जाँचकर फिर से प्रयास करें, या उनके बिना भेजने के लिए उन्हें हटा दें।",
     "historyLoadError": "आपकी रिपोर्ट लोड नहीं हो सकीं",
-    "viewPhoto": "फ़ोटो {{index}}/{{total}} देखें"
+    "viewPhoto": "फ़ोटो {{index}}/{{total}} देखें",
+    "viewPhotoDraft": "फ़ोटो पूर्वावलोकन",
+    "guestHistoryTitle": "अपनी रिपोर्ट देखने के लिए साइन इन करें",
+    "guestHistorySubtitle": "साइन इन रहने के दौरान आपके द्वारा सबमिट की गई रिपोर्ट आपके सुरक्षित खाते में सहेजी जाती हैं"
   },
   "safeCheckin": {
     "active": "चेक-इन चालू है",

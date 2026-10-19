@@ -2,6 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +23,7 @@ import { Text } from '@/components/ui/Text';
 import { captureException } from '@/config/sentry';
 import { COLORS } from '@/constants/colors';
 import { APP_CONFIG } from '@/constants/config';
+import { ROUTES } from '@/constants/routes';
 import { ICON_SIZE } from '@/constants/ui';
 import { trackIncidentReportSubmitted } from '@/services/analytics.service';
 import {
@@ -54,8 +56,10 @@ const BYTES_PER_MB = 1024 * 1024;
 
 export default function IncidentReportScreen(): React.JSX.Element {
   const { t } = useTranslation();
+  const router = useRouter();
 
   const userId = useAuthStore((state) => state.user?.uid ?? null);
+  const isGuest = useAuthStore((state) => state.isGuest);
 
   const [activeView, setActiveView] = useState<ActiveView>('new');
   const [location, setLocation] = useState<LocationData | null>(null);
@@ -63,9 +67,10 @@ export default function IncidentReportScreen(): React.JSX.Element {
   const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(() => userId !== null);
   const [historyError, setHistoryError] = useState(false);
-  const [viewerUri, setViewerUri] = useState<string | null>(null);
+  const [viewerImages, setViewerImages] = useState<string[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const schema = useMemo(
     () =>
@@ -139,21 +144,41 @@ export default function IncidentReportScreen(): React.JSX.Element {
   }, [runLocationFetch, runHistoryLoad]);
 
   async function handleAddPhoto(): Promise<void> {
-    if (photoUris.length >= APP_CONFIG.INCIDENT_MAX_PHOTOS) return;
+    const remainingLimit = APP_CONFIG.INCIDENT_MAX_PHOTOS - photoUris.length;
+    if (remainingLimit <= 0) return;
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: APP_CONFIG.COMMUNITY_IMAGE_QUALITY,
+      allowsMultipleSelection: true,
+      selectionLimit: remainingLimit,
     });
-    const asset = result.canceled ? undefined : result.assets[0];
-    if (asset === undefined) return;
-    if (
-      asset.fileSize !== undefined &&
-      asset.fileSize > APP_CONFIG.MAX_COMMUNITY_IMAGE_MB * BYTES_PER_MB
-    ) {
-      Alert.alert(t('incidentReport.photoTooLarge', { mb: APP_CONFIG.MAX_COMMUNITY_IMAGE_MB }));
-      return;
+    if (result.canceled || !result.assets || result.assets.length === 0) return;
+
+    const validUris: string[] = [];
+    let hasOversized = false;
+
+    for (const asset of result.assets) {
+      if (
+        asset.fileSize !== undefined &&
+        asset.fileSize > APP_CONFIG.MAX_COMMUNITY_IMAGE_MB * BYTES_PER_MB
+      ) {
+        hasOversized = true;
+      } else {
+        validUris.push(asset.uri);
+      }
     }
-    setPhotoUris((current) => [...current, asset.uri]);
+
+    if (hasOversized) {
+      Alert.alert(t('incidentReport.photoTooLarge', { mb: APP_CONFIG.MAX_COMMUNITY_IMAGE_MB }));
+    }
+
+    if (validUris.length > 0) {
+      setPhotoUris((current) => {
+        const combined = [...current, ...validUris];
+        return combined.slice(0, APP_CONFIG.INCIDENT_MAX_PHOTOS);
+      });
+    }
   }
 
   function handleRemovePhoto(uri: string): void {
@@ -338,13 +363,22 @@ export default function IncidentReportScreen(): React.JSX.Element {
             <View className="flex-row flex-wrap gap-2">
               {photoUris.map((uri) => (
                 <View key={uri} className="h-16 w-16">
-                  <Image
-                    source={{ uri }}
-                    className="h-16 w-16 rounded-xl"
-                    contentFit="cover"
-                    transition={200}
-                    cachePolicy="memory-disk"
-                  />
+                  <Pressable
+                    onPress={() => {
+                      setViewerImages([uri]);
+                      setViewerIndex(0);
+                    }}
+                    accessibilityRole="imagebutton"
+                    accessibilityLabel={t('incidentReport.viewPhotoDraft')}
+                  >
+                    <Image
+                      source={{ uri }}
+                      className="h-16 w-16 rounded-xl border border-stone/20 dark:border-dark-border"
+                      contentFit="cover"
+                      transition={200}
+                      cachePolicy="memory-disk"
+                    />
+                  </Pressable>
                   <Pressable
                     onPress={() => handleRemovePhoto(uri)}
                     accessibilityRole="button"
@@ -385,6 +419,14 @@ export default function IncidentReportScreen(): React.JSX.Element {
           </View>
         ) : isLoadingHistory ? (
           <Spinner size="lg" className="mt-8 items-center" />
+        ) : userId === null || isGuest ? (
+          <EmptyState
+            icon="log-in-outline"
+            title={t('incidentReport.guestHistoryTitle')}
+            subtitle={t('incidentReport.guestHistorySubtitle')}
+            actionLabel={t('profile.signInNow')}
+            onAction={() => router.push(ROUTES.WELCOME)}
+          />
         ) : historyError ? (
           <EmptyState
             icon="alert-circle-outline"
@@ -429,7 +471,10 @@ export default function IncidentReportScreen(): React.JSX.Element {
                     {item.photoUrls.map((url, index) => (
                       <Pressable
                         key={url}
-                        onPress={() => setViewerUri(url)}
+                        onPress={() => {
+                          setViewerImages(item.photoUrls);
+                          setViewerIndex(index);
+                        }}
                         accessibilityRole="imagebutton"
                         accessibilityLabel={t('incidentReport.viewPhoto', {
                           index: index + 1,
@@ -438,7 +483,7 @@ export default function IncidentReportScreen(): React.JSX.Element {
                       >
                         <Image
                           source={{ uri: url }}
-                          className="h-16 w-16 rounded-xl"
+                          className="h-16 w-16 rounded-xl border border-stone/20 dark:border-dark-border"
                           contentFit="cover"
                           cachePolicy="memory-disk"
                         />
@@ -458,7 +503,11 @@ export default function IncidentReportScreen(): React.JSX.Element {
           />
         )}
       </SafeScreen>
-      <ImageViewer uri={viewerUri} onClose={() => setViewerUri(null)} />
+      <ImageViewer
+        images={viewerImages}
+        initialIndex={viewerIndex}
+        onClose={() => setViewerImages([])}
+      />
     </ErrorBoundary>
   );
 }

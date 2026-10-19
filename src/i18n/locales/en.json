@@ -411,9 +411,11 @@
     },
     "photoTooLarge": "That photo is larger than {{mb}} MB. Please choose a smaller one.",
     "photoUploadFailedTitle": "Photo upload failed",
-    "photoUploadFailedBody": "{{failed}} of {{total}} photo(s) could not be uploaded. Check your connection and try again, or remove them to submit without.",
     "historyLoadError": "Couldn't load your reports",
-    "viewPhoto": "View photo {{index}} of {{total}}"
+    "viewPhoto": "View photo {{index}} of {{total}}",
+    "viewPhotoDraft": "Preview photo",
+    "guestHistoryTitle": "Sign in to view your reports",
+    "guestHistorySubtitle": "Incident reports you submit while signed in are saved to your secure account"
   },
   "safeCheckin": {
     "active": "Check-In Active",

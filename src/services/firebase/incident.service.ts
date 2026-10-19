@@ -87,10 +87,19 @@ export async function getMyIncidentReports(userId: string): Promise<IncidentRepo
         firestoreLimit(INCIDENT_HISTORY_LIMIT),
       ),
     );
-    return snapshot.docs.map((document) => ({
-      id: document.id,
-      ...(document.data() as Omit<IncidentReport, 'id'>),
-    }));
+    return snapshot.docs.map((document): IncidentReport => {
+      const data = document.data();
+      const photoUrls: string[] = Array.isArray(data.photoUrls)
+        ? (data.photoUrls as string[])
+        : Array.isArray(data.photos)
+          ? (data.photos as string[])
+          : [];
+      return {
+        ...(data as Omit<IncidentReport, 'id' | 'photoUrls'>),
+        id: document.id,
+        photoUrls,
+      };
+    });
   } catch (error) {
     console.error('getMyIncidentReports failed:', error);
     throw error;

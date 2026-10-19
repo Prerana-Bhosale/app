@@ -124,6 +124,25 @@ describe('getMyIncidentReports', () => {
     expect(reports[1]?.status).toBe('resolved');
   });
 
+  it('falls back to photos field when photoUrls is not present', async () => {
+    jest.mocked(getDocs).mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'r3',
+          data: () => ({
+            userId: 'user-1',
+            title: 'Legacy',
+            status: 'submitted',
+            photos: ['https://cdn/legacy.jpg'],
+          }),
+        },
+      ],
+    } as never);
+
+    const reports = await getMyIncidentReports('user-1');
+    expect(reports[0]?.photoUrls).toEqual(['https://cdn/legacy.jpg']);
+  });
+
   it('logs and rethrows when Firestore fails', async () => {
     jest.mocked(getDocs).mockRejectedValueOnce(new Error('offline'));
     await expect(getMyIncidentReports('user-1')).rejects.toThrow('offline');
