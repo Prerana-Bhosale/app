@@ -34,7 +34,7 @@ export interface UseCommunityResult {
   setActiveTab: (tab: CommunityTab) => void;
   refresh: () => void;
   createPost: (input: CreatePostInput) => Promise<string>;
-  reportPost: (postId: string) => Promise<void>;
+  reportPost: (postId: string, reason?: string) => Promise<void>;
   /** Deletes one of the signed-in user's own posts. */
   deletePost: (post: CommunityPost) => Promise<void>;
   /** The signed-in user's id, to tell which posts are theirs. */
@@ -192,10 +192,14 @@ export function useCommunity(): UseCommunityResult {
     [userId, authorName, authorPhotoUrl],
   );
 
-  const reportPost = useCallback(async (postId: string): Promise<void> => {
-    await reportPostService(postId);
-    trackCommunityPostReported();
-  }, []);
+  const reportPost = useCallback(
+    async (postId: string, reason?: string): Promise<void> => {
+      if (userId === null || isGuest) throw new Error('errors.generic');
+      await reportPostService(postId, userId, reason);
+      trackCommunityPostReported();
+    },
+    [userId, isGuest],
+  );
 
   const deletePost = useCallback(async (post: CommunityPost): Promise<void> => {
     await deletePostService(post);

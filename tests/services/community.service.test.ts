@@ -5,13 +5,13 @@ import {
   getDocs,
   onSnapshot,
   orderBy,
+  setDoc,
   startAfter,
   updateDoc,
   where,
 } from '@react-native-firebase/firestore';
 import { deleteObject, getDownloadURL, putFile, ref } from '@react-native-firebase/storage';
 
-import { APP_CONFIG } from '@/constants/config';
 import {
   createPost,
   deletePost,
@@ -32,6 +32,7 @@ jest.mock('@react-native-firebase/firestore', () => ({
   deleteDoc: jest.fn(() => Promise.resolve()),
   getDoc: jest.fn(),
   getDocs: jest.fn(() => Promise.resolve({ docs: [] })),
+  setDoc: jest.fn(() => Promise.resolve()),
   updateDoc: jest.fn(() => Promise.resolve()),
   query: jest.fn((ref: unknown) => ref),
   where: jest.fn((field: string, op: string, value: unknown) => ({ field, op, value })),
@@ -50,12 +51,6 @@ const NAMED_INPUT: CreatePostInput = {
   city: 'Mumbai',
   state: 'MH',
 };
-
-const mockSnap = (data: unknown): unknown => ({
-  exists: () => data !== undefined,
-  id: 'post-1',
-  data: () => data,
-});
 
 describe('community.service', () => {
   let errorSpy: jest.SpyInstance;
@@ -107,41 +102,43 @@ describe('community.service', () => {
     expect(payload).toMatchObject({ locationUrl: 'https://maps/x', imageUrl: 'https://img/x' });
   });
 
-  it('reportPost increments and keeps the post visible below the threshold', async () => {
-    jest.mocked(getDoc).mockResolvedValueOnce(mockSnap({ reportCount: 1 }) as never);
+  it('records a new report under subcollection and increments reportCount without mutating isHidden', async () => {
+    jest.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as never);
 
-    await reportPost('post-1');
+    await reportPost('post-1', 'user-1', 'harassment');
 
-    expect(updateDoc).toHaveBeenCalledWith(expect.anything(), {
-      reportCount: { __increment: 1 },
-      isHidden: false,
-    });
+    expect(setDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ path: expect.stringContaining('community/post-1/reports/user-1') }),
+      {
+        reporterId: 'user-1',
+        postId: 'post-1',
+        reason: 'harassment',
+        createdAt: { __serverTimestamp: true },
+      },
+    );
+    expect(updateDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ path: expect.stringContaining('community/post-1') }),
+      {
+        reportCount: { __increment: 1 },
+      },
+    );
+    expect(updateDoc).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ isHidden: expect.anything() }),
+    );
   });
 
-  it('reportPost hides the post once reports reach the threshold', async () => {
-    jest
-      .mocked(getDoc)
-      .mockResolvedValueOnce(
-        mockSnap({ reportCount: APP_CONFIG.COMMUNITY_REPORT_HIDE_THRESHOLD - 1 }) as never,
-      );
+  it('skips duplicate report and does not increment reportCount if already reported by user', async () => {
+    jest.mocked(getDoc).mockResolvedValueOnce({ exists: () => true } as never);
 
-    await reportPost('post-1');
+    await reportPost('post-1', 'user-1');
 
-    expect(updateDoc).toHaveBeenCalledWith(expect.anything(), {
-      reportCount: { __increment: 1 },
-      isHidden: true,
-    });
+    expect(setDoc).not.toHaveBeenCalled();
+    expect(updateDoc).not.toHaveBeenCalled();
   });
 
-  it('reportPost treats a missing document as zero reports', async () => {
-    jest.mocked(getDoc).mockResolvedValueOnce(mockSnap(undefined) as never);
-
-    await reportPost('post-1');
-
-    expect(updateDoc).toHaveBeenCalledWith(expect.anything(), {
-      reportCount: { __increment: 1 },
-      isHidden: false,
-    });
+  it('throws when reporterId is empty or not provided', async () => {
+    await expect(reportPost('post-1', '')).rejects.toThrow('Reporter ID is required');
   });
 
   it('uploadPostImage stores under community/{userId}/{timestamp}.jpg and returns the URL', async () => {
@@ -271,7 +268,7 @@ describe('community.service', () => {
 
   it.each([
     ['createPost', (): Promise<unknown> => createPost('u1', 'Asha', 'p', NAMED_INPUT)],
-    ['reportPost', (): Promise<unknown> => reportPost('post-1')],
+    ['reportPost', (): Promise<unknown> => reportPost('post-1', 'u1')],
     ['loadMoreCityPosts', (): Promise<unknown> => loadMoreCityPosts('Mumbai', {} as never)],
     ['loadMoreAllIndiaPosts', (): Promise<unknown> => loadMoreAllIndiaPosts({} as never)],
     ['uploadPostImage', (): Promise<unknown> => uploadPostImage('u1', 'file:///x.jpg')],

@@ -170,15 +170,22 @@ describe('useCommunity', () => {
     expect(trackCommunityHelpRequested).toHaveBeenCalled();
   });
 
-  it('reportPost delegates and tracks', async () => {
+  it('reportPost delegates with userId and tracks', async () => {
     const { result } = await renderHook(() => useCommunity());
 
     await act(async () => {
       await result.current.reportPost('p9');
     });
 
-    expect(reportPostService).toHaveBeenCalledWith('p9');
+    expect(reportPostService).toHaveBeenCalledWith('p9', 'u1', undefined);
     expect(trackCommunityPostReported).toHaveBeenCalled();
+  });
+
+  it('reportPost rejects when user is not authenticated or is a guest', async () => {
+    useAuthStore.setState({ ...authState, surakshakUser: null, isGuest: true });
+    const { result } = await renderHook(() => useCommunity());
+
+    await expect(result.current.reportPost('p9')).rejects.toThrow('errors.generic');
   });
 
   it('loadMore appends the next page and keeps paginating on a full page', async () => {

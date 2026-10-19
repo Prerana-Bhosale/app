@@ -165,6 +165,10 @@ export default function CommunityScreen(): React.JSX.Element {
   };
 
   const handleReportPress = (postId: string): void => {
+    if (isGuest || currentUserId === null) {
+      Alert.alert(t('community.guestPrompt'));
+      return;
+    }
     Alert.alert(t('community.reportConfirmTitle'), t('community.reportConfirmBody'), [
       { text: t('common.cancel'), style: 'cancel' },
       {

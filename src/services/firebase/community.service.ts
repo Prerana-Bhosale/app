@@ -11,6 +11,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   startAfter,
   updateDoc,
   where,
@@ -194,19 +195,35 @@ export async function createPost(
 }
 
 /**
- * Increments a post's report count. The post auto-hides once reports reach
- * `COMMUNITY_REPORT_HIDE_THRESHOLD`; a hidden post drops out of every feed on
- * the next snapshot.
+ * Records a report for a post under subcollection `community/{postId}/reports/{reporterId}`.
+ * Deduplicates reports from the same user so a user cannot report multiple times.
+ * Increments `reportCount` on the post; content review and thresholding is handled
+ * by Cloud Functions and the moderation dashboard rather than directly muting
+ * `isHidden` on the client (BUG-041).
  * @phase Phase 5 — Community
  */
-export async function reportPost(postId: string): Promise<void> {
+export async function reportPost(
+  postId: string,
+  reporterId: string,
+  reason = 'inappropriate_content',
+): Promise<void> {
+  if (!reporterId) {
+    throw new Error('Reporter ID is required to report a post');
+  }
   try {
-    const snapshot = await getDoc(communityDoc(postId));
-    const data = snapshot.data() as Pick<CommunityPost, 'reportCount'> | undefined;
-    const next = (data?.reportCount ?? 0) + 1;
+    const reportRef = doc(firestore, COMMUNITY_COLLECTION, postId, 'reports', reporterId);
+    const existing = await getDoc(reportRef);
+    if (existing.exists()) {
+      return;
+    }
+    await setDoc(reportRef, {
+      reporterId,
+      postId,
+      reason,
+      createdAt: serverTimestamp(),
+    });
     await updateDoc(communityDoc(postId), {
       reportCount: increment(1),
-      isHidden: next >= APP_CONFIG.COMMUNITY_REPORT_HIDE_THRESHOLD,
     });
   } catch (error) {
     console.error('reportPost failed:', error);
