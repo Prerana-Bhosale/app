@@ -10,6 +10,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
@@ -23,7 +26,8 @@ import expo.modules.kotlin.modules.ModuleDefinition
 
 class SurakshakNativeModule : Module() {
   private var proximityWakeLock: PowerManager.WakeLock? = null
-
+  private var sirenPlayer: MediaPlayer? = null
+  private var previousAlarmVolume: Int? = null
   override fun definition() = ModuleDefinition {
     Name("SurakshakNative")
 
@@ -49,8 +53,10 @@ class SurakshakNativeModule : Module() {
       }
     }
 
-    OnDestroy { releaseProximityWakeLock() }
-
+OnDestroy {
+  releaseProximityWakeLock()
+  stopSirenPlayback()
+}
     /**
      * Send SMS directly in the background with no compose UI and no user
      * interaction. Requires the `SEND_SMS` permission (declared in
@@ -177,9 +183,54 @@ class SurakshakNativeModule : Module() {
           }
         context.startActivity(intent)
         promise.resolve("calling")
-      } catch (e: Exception) {
+            } catch (e: Exception) {
         promise.reject("CALL_FAILED", "Failed to place call: ${e.message}", e)
       }
+    }
+
+    AsyncFunction("startSiren") { audioUri: String ->
+      val context = appContext.reactContext
+        ?: throw IllegalStateException("No React context")
+
+      // Avoid starting the siren more than once.
+      if (sirenPlayer?.isPlaying == true) return@AsyncFunction
+
+      val audioManager =
+        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+      // Save the original alarm volume before raising it.
+      if (previousAlarmVolume == null) {
+        previousAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+      }
+
+      try {
+        audioManager.setStreamVolume(
+          AudioManager.STREAM_ALARM,
+          audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM),
+          0,
+        )
+
+        val player = MediaPlayer()
+        player.setAudioAttributes(
+          AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ALARM)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build(),
+        )
+        player.setDataSource(context, Uri.parse(audioUri))
+        player.isLooping = true
+        player.prepare()
+        player.start()
+
+        sirenPlayer = player
+      } catch (e: Exception) {
+        stopSirenPlayback()
+        throw e
+      }
+    }
+
+    AsyncFunction("stopSiren") {
+      stopSirenPlayback()
     }
   }
 
@@ -270,6 +321,37 @@ class SurakshakNativeModule : Module() {
     proximityWakeLock?.let { if (it.isHeld) it.release() }
     proximityWakeLock = null
   }
+  private fun stopSirenPlayback() {
+  try {
+    sirenPlayer?.let { player ->
+      if (player.isPlaying) {
+        player.stop()
+      }
+      player.release()
+    }
+  } catch (_: Exception) {
+    // Player may already be stopped or released.
+  } finally {
+    sirenPlayer = null
+  }
+
+  val previousVolume = previousAlarmVolume
+  previousAlarmVolume = null
+
+  if (previousVolume != null) {
+    val context = appContext.reactContext
+    if (context != null) {
+      val audioManager =
+        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+      audioManager.setStreamVolume(
+        AudioManager.STREAM_ALARM,
+        previousVolume,
+        0,
+      )
+    }
+  }
+}
 
   companion object {
     private const val DEFAULT_LAUNCHER_ALIAS = "DefaultLauncher"

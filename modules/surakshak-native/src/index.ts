@@ -8,6 +8,8 @@ interface SurakshakNativeModuleInterface {
   placeCall: (phoneNumber: string) => Promise<string>;
   setProximityScreenOff: (enabled: boolean) => Promise<void>;
   setAppIcon: (name: string | null) => Promise<void>;
+  startSiren: (audioUri: string) => Promise<void>;
+  stopSiren: () => Promise<void>;
 }
 
 const NativeModule = requireNativeModule<SurakshakNativeModuleInterface>('SurakshakNative');
@@ -74,6 +76,20 @@ export async function setProximityScreenOff(enabled: boolean): Promise<void> {
  */
 export async function setAppIcon(name: string | null): Promise<void> {
   await NativeModule.setAppIcon(name);
+}
+
+/**
+ * Starts the emergency siren using Android's alarm audio stream.
+ */
+export async function startSiren(audioUri: string): Promise<void> {
+  await NativeModule.startSiren(audioUri);
+}
+
+/**
+ * Stops the emergency siren and restores the previous alarm volume.
+ */
+export async function stopSiren(): Promise<void> {
+  await NativeModule.stopSiren();
 }
 
 export type { CallResult, SendSmsResult } from './SurakshakNative.types';
