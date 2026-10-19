@@ -49,10 +49,28 @@ export function registerLiveLocationTask(): void {
       captureException(error);
       return;
     }
-    const fix = data?.locations?.[0];
-    if (fix === undefined) return;
 
     try {
+      const expiresAtStr = await AsyncStorage.getItem(STORAGE_KEYS.LIVE_LOCATION_EXPIRES_AT);
+      if (expiresAtStr !== null) {
+        const expiresAtMs = Number(expiresAtStr);
+        if (!Number.isNaN(expiresAtMs) && Date.now() >= expiresAtMs) {
+          const sessionId = await AsyncStorage.getItem(STORAGE_KEYS.LIVE_LOCATION_SESSION_ID);
+          if (sessionId !== null) {
+            await stopLiveLocationSession(sessionId);
+          }
+          await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+          await AsyncStorage.multiRemove([
+            STORAGE_KEYS.LIVE_LOCATION_SESSION_ID,
+            STORAGE_KEYS.LIVE_LOCATION_EXPIRES_AT,
+          ]);
+          return;
+        }
+      }
+
+      const fix = data?.locations?.[0];
+      if (fix === undefined) return;
+
       const sessionId = await AsyncStorage.getItem(STORAGE_KEYS.LIVE_LOCATION_SESSION_ID);
       if (sessionId === null) return;
       await updateLiveLocation(sessionId, fix.coords.latitude, fix.coords.longitude);
@@ -90,7 +108,10 @@ export function useLiveLocation(): UseLiveLocationResult {
     if (activeSessionId === null) return;
 
     await stopLiveLocationSession(activeSessionId);
-    await AsyncStorage.removeItem(STORAGE_KEYS.LIVE_LOCATION_SESSION_ID);
+    await AsyncStorage.multiRemove([
+      STORAGE_KEYS.LIVE_LOCATION_SESSION_ID,
+      STORAGE_KEYS.LIVE_LOCATION_EXPIRES_AT,
+    ]);
     setLiveLocationActive(false);
     setExpiresAt(null);
 
@@ -116,9 +137,16 @@ export function useLiveLocation(): UseLiveLocationResult {
         if (expiry > new Date()) {
           setLiveLocationActive(true, session.id);
           setExpiresAt(expiry);
-          void AsyncStorage.setItem(STORAGE_KEYS.LIVE_LOCATION_SESSION_ID, session.id);
+          void AsyncStorage.multiSet([
+            [STORAGE_KEYS.LIVE_LOCATION_SESSION_ID, session.id],
+            [STORAGE_KEYS.LIVE_LOCATION_EXPIRES_AT, String(expiry.getTime())],
+          ]);
         } else {
           void stopLiveLocationSession(session.id);
+          void AsyncStorage.multiRemove([
+            STORAGE_KEYS.LIVE_LOCATION_SESSION_ID,
+            STORAGE_KEYS.LIVE_LOCATION_EXPIRES_AT,
+          ]);
         }
       })
       .catch((error: unknown) => captureException(error));
@@ -150,9 +178,13 @@ export function useLiveLocation(): UseLiveLocationResult {
         fix.longitude,
       );
 
-      await AsyncStorage.setItem(STORAGE_KEYS.LIVE_LOCATION_SESSION_ID, newSessionId);
+      const expiryDate = new Date(Date.now() + durationHours * MS_PER_HOUR);
+      await AsyncStorage.multiSet([
+        [STORAGE_KEYS.LIVE_LOCATION_SESSION_ID, newSessionId],
+        [STORAGE_KEYS.LIVE_LOCATION_EXPIRES_AT, String(expiryDate.getTime())],
+      ]);
       setLiveLocationActive(true, newSessionId);
-      setExpiresAt(new Date(Date.now() + durationHours * MS_PER_HOUR));
+      setExpiresAt(expiryDate);
 
       const backgroundGranted = await requestBackgroundLocationPermission();
       if (backgroundGranted) {
@@ -177,7 +209,7 @@ export function useLiveLocation(): UseLiveLocationResult {
       const language = surakshakUser?.language ?? profile?.language ?? 'en';
       const locationUrl = getLocationUrl(fix.latitude, fix.longitude);
 
-      const untilTime = formatClockTime(new Date(Date.now() + durationHours * MS_PER_HOUR));
+      const untilTime = formatClockTime(expiryDate);
       const result = await sendLiveLocationShare(selected, locationUrl, name, untilTime, language);
       await recordSMSAlert({
         type: 'live_location',
@@ -198,7 +230,14 @@ export function useLiveLocation(): UseLiveLocationResult {
 
       await extendLiveLocationSession(activeSessionId, hours);
       const refreshed = await getActiveLiveSession(userId);
-      if (refreshed !== null) setExpiresAt(refreshed.expiresAt.toDate());
+      if (refreshed !== null) {
+        const newExpiry = refreshed.expiresAt.toDate();
+        setExpiresAt(newExpiry);
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.LIVE_LOCATION_EXPIRES_AT,
+          String(newExpiry.getTime()),
+        );
+      }
 
       trackLiveLocationExtended(hours);
     },

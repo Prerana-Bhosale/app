@@ -1,6 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, renderHook } from '@testing-library/react-native';
+import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
 
-import { useLiveLocation } from '@/hooks/useLiveLocation';
+import { STORAGE_KEYS } from '@/constants/storage';
+import { registerLiveLocationTask, useLiveLocation } from '@/hooks/useLiveLocation';
 import {
   createLiveLocationSession,
   extendLiveLocationSession,
@@ -93,5 +97,31 @@ describe('useLiveLocation', () => {
     });
 
     expect(extendLiveLocationSession).toHaveBeenCalledWith('session-1', 1);
+  });
+
+  it('registerLiveLocationTask terminates background updates when session is expired', async () => {
+    registerLiveLocationTask();
+    const taskCallback = jest.mocked(TaskManager.defineTask).mock.calls[0]?.[1] as
+      ((body: { data?: unknown; error?: unknown }) => Promise<void>) | undefined;
+    expect(taskCallback).toBeDefined();
+
+    jest.mocked(AsyncStorage.getItem).mockImplementation((key: string) => {
+      if (key === STORAGE_KEYS.LIVE_LOCATION_EXPIRES_AT) {
+        return Promise.resolve(String(Date.now() - 5000));
+      }
+      if (key === STORAGE_KEYS.LIVE_LOCATION_SESSION_ID) {
+        return Promise.resolve('session-1');
+      }
+      return Promise.resolve(null);
+    });
+
+    await taskCallback!({ data: { locations: [{ coords: { latitude: 19, longitude: 72 } }] } });
+
+    expect(stopLiveLocationSession).toHaveBeenCalledWith('session-1');
+    expect(Location.stopLocationUpdatesAsync).toHaveBeenCalled();
+    expect(AsyncStorage.multiRemove).toHaveBeenCalledWith([
+      STORAGE_KEYS.LIVE_LOCATION_SESSION_ID,
+      STORAGE_KEYS.LIVE_LOCATION_EXPIRES_AT,
+    ]);
   });
 });

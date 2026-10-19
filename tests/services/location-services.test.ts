@@ -53,6 +53,34 @@ describe('getCurrentLocation', () => {
     await expect(getCurrentLocation()).rejects.toThrow('errors.locationPermissionDenied');
     expect(errorSpy).toHaveBeenCalled();
   });
+
+  it('falls back to last known position when fresh fix times out', async () => {
+    jest
+      .mocked(Location.getCurrentPositionAsync)
+      .mockImplementationOnce(() => new Promise(() => undefined));
+    jest.mocked(Location.getLastKnownPositionAsync).mockResolvedValueOnce({
+      coords: { latitude: 19.1, longitude: 72.8, accuracy: 10 },
+      timestamp: 12345,
+    } as never);
+
+    const result = await getCurrentLocation(20);
+    expect(result).toEqual({
+      latitude: 19.1,
+      longitude: 72.8,
+      timestamp: 12345,
+      accuracy: 10,
+    });
+  });
+
+  it('throws errors.locationUnavailable when fresh fix times out and last known position is null', async () => {
+    jest
+      .mocked(Location.getCurrentPositionAsync)
+      .mockImplementationOnce(() => new Promise(() => undefined));
+    jest.mocked(Location.getLastKnownPositionAsync).mockResolvedValueOnce(null);
+
+    await expect(getCurrentLocation(20)).rejects.toThrow('errors.locationUnavailable');
+    expect(errorSpy).toHaveBeenCalled();
+  });
 });
 
 describe('getLocationWithTimeout', () => {

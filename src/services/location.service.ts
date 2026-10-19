@@ -27,18 +27,38 @@ const PLACES_BASE_URL = 'https://places.googleapis.com/v1';
  * low-battery alert to attach a shareable location link.
  * @phase Phase 3 — Emergency Core (foreground fix only; watching is Phase 4)
  */
-export async function getCurrentLocation(): Promise<LocationData> {
+export async function getCurrentLocation(timeoutMs: number = 6000): Promise<LocationData> {
   try {
     const granted = await requestLocationPermission();
     if (!granted) {
       throw new Error('errors.locationPermissionDenied');
     }
 
-    const position = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), timeoutMs);
     });
 
-    return toLocationData(position);
+    try {
+      const position = await Promise.race([
+        Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        }),
+        timeout,
+      ]);
+      if (position !== null) {
+        return toLocationData(position);
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+
+    const lastKnown = await Location.getLastKnownPositionAsync();
+    if (lastKnown !== null) {
+      return toLocationData(lastKnown);
+    }
+
+    throw new Error('errors.locationUnavailable');
   } catch (error) {
     console.error('getCurrentLocation failed:', error);
     throw error;
@@ -209,6 +229,7 @@ export async function fetchNearbyPlaces(
   try {
     const response = await fetch(`${PLACES_BASE_URL}/places:searchNearby`, {
       method: 'POST',
+      signal: AbortSignal.timeout(8000),
       headers: placesHeaders(
         'places.id,places.displayName,places.formattedAddress,places.location,' +
           'places.currentOpeningHours.openNow,places.regularOpeningHours.openNow,' +
@@ -270,6 +291,7 @@ export async function autocompletePlaces(
   try {
     const response = await fetch(`${PLACES_BASE_URL}/places:autocomplete`, {
       method: 'POST',
+      signal: AbortSignal.timeout(8000),
       // Autocomplete's field mask is fixed by the endpoint; send an empty one.
       headers: placesHeaders('*'),
       body: JSON.stringify({
@@ -317,6 +339,7 @@ export async function getPlaceLocation(placeId: string): Promise<PlaceLocation> 
   try {
     const response = await fetch(`${PLACES_BASE_URL}/places/${placeId}`, {
       method: 'GET',
+      signal: AbortSignal.timeout(8000),
       headers: placesHeaders('id,displayName,location'),
     });
 
