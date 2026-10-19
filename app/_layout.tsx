@@ -11,12 +11,13 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
+import { Alert, LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import '@/global.css';
 
+import { GlobalSOSOverlay } from '@/components/features/sos/GlobalSOSOverlay';
 import { Spinner } from '@/components/ui/Spinner';
 import { initMixPanel } from '@/config/mixpanel';
 import { initOneSignal } from '@/config/onesignal';
@@ -46,6 +47,11 @@ const DISGUISE_SEGMENT = '(disguise)';
 // The background location task must be defined before the first tick so the
 // OS can hand a relaunch back to it — see `useLiveLocation`.
 registerLiveLocationTask();
+
+// Suppress React Native dev client LogBox notification bars from rendering at the
+// bottom of the viewport on physical devices and emulators. Real errors still route
+// to Metro terminal, console, Sentry, and screen ErrorBoundaries.
+LogBox.ignoreAllLogs(true);
 
 function RootLayout(): React.JSX.Element {
   const router = useRouter();
@@ -242,7 +248,10 @@ function RootLayout(): React.JSX.Element {
           // on its first screen (Home) instead of the tab the user left. A
           // real Stack keeps `(tabs)` mounted underneath, preserving which
           // tab was selected across the push/pop.
-          <Stack screenOptions={{ headerShown: false }} />
+          <>
+            <Stack screenOptions={{ headerShown: false }} />
+            <GlobalSOSOverlay />
+          </>
         ) : (
           <Spinner size="lg" className="flex-1 items-center justify-center" />
         )}

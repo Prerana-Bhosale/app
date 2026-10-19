@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -12,6 +12,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Spinner } from '@/components/ui/Spinner';
 import { Text } from '@/components/ui/Text';
 import { captureException } from '@/config/sentry';
+import { COLORS } from '@/constants/colors';
 import { trackNewsViewed } from '@/services/analytics.service';
 import { getNewsById, type NewsArticle } from '@/services/firebase/news.service';
 import { formatTimestamp } from '@/utils/date.utils';
@@ -22,6 +23,8 @@ export default function NewsDetailScreen(): React.JSX.Element {
 
   const [item, setItem] = useState<NewsArticle | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,22 +36,50 @@ export default function NewsDetailScreen(): React.JSX.Element {
       })
       .catch((error: unknown) => captureException(error))
       .finally(() => {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+          setRefreshing(false);
+        }
       });
     return (): void => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, reloadToken]);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    setReloadToken((prev) => prev + 1);
+  }, []);
+
+  const handleRetry = useCallback(() => {
+    setIsLoading(true);
+    setReloadToken((prev) => prev + 1);
+  }, []);
 
   return (
     <ErrorBoundary>
-      <SafeScreen scrollable>
+      <SafeScreen
+        scrollable
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[COLORS.SHAKTI_PURPLE]}
+            tintColor={COLORS.SHAKTI_PURPLE}
+          />
+        }
+      >
         <ScreenHeader titleKey="screens.newsDetail" />
 
         {isLoading ? (
           <Spinner size="lg" className="flex-1 items-center justify-center" />
         ) : item === null ? (
-          <EmptyState icon="alert-circle-outline" title={t('info.loadError')} />
+          <EmptyState
+            icon="alert-circle-outline"
+            title={t('info.loadError')}
+            actionLabel={t('common.retry')}
+            onAction={handleRetry}
+          />
         ) : (
           <View>
             {item.imageUrl !== '' && (

@@ -24,6 +24,17 @@ describe('Button', () => {
     expect(onPress).not.toHaveBeenCalled();
   });
 
+  it('applies high-contrast disabled styling when disabled', async () => {
+    const { getByRole, getByText } = await render(
+      <Button variant="primary" size="md" label="Submit Report" onPress={jest.fn()} disabled />,
+    );
+
+    const button = getByRole('button');
+    expect(button.props.accessibilityState).toMatchObject({ disabled: true });
+    expect(button.props.className).toContain('bg-disabled-bg');
+    expect(getByText('Submit Report').props.className).toContain('text-disabled-text');
+  });
+
   it('does not fire while loading, and hides the label', async () => {
     const onPress = jest.fn();
     const { getByRole, queryByText } = await render(

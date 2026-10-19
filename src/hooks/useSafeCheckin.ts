@@ -5,6 +5,7 @@ import { AppState } from 'react-native';
 import { captureException } from '@/config/sentry';
 import { APP_CONFIG, LOCATION_UNAVAILABLE } from '@/constants/config';
 import { STORAGE_KEYS } from '@/constants/storage';
+import i18n from '@/i18n';
 import {
   trackSafeCheckinAlertSent,
   trackSafeCheckinMissed,
@@ -130,8 +131,8 @@ export function useSafeCheckin(): UseSafeCheckinResult {
       setMissedCount(missed);
       await cancelLocalNotification(NOTIFICATION_ID).catch(() => undefined);
       await scheduleLocalNotification(
-        '⏰ Safe Check-In Required',
-        "Tap to confirm you're safe. Missing check-ins alerts your contacts.",
+        i18n.t('safeCheckin.notificationTitle'),
+        i18n.t('safeCheckin.notificationBody'),
         REMINDER_DELAY_SECONDS,
         { type: 'safe_checkin' },
       );
@@ -227,8 +228,8 @@ export function useSafeCheckin(): UseSafeCheckinResult {
 
     await cancelLocalNotification(NOTIFICATION_ID).catch(() => undefined);
     await scheduleLocalNotification(
-      '⏰ Safe Check-In Required',
-      "Tap to confirm you're safe. Missing check-ins alerts your contacts.",
+      i18n.t('safeCheckin.notificationTitle'),
+      i18n.t('safeCheckin.notificationBody'),
       intervalMinutes * 60,
       { type: 'safe_checkin' },
     );
@@ -243,8 +244,8 @@ export function useSafeCheckin(): UseSafeCheckinResult {
     await persistNextCheckIn(nextAt, 0);
     await cancelLocalNotification(NOTIFICATION_ID).catch(() => undefined);
     await scheduleLocalNotification(
-      '⏰ Safe Check-In Required',
-      "Tap to confirm you're safe. Missing check-ins alerts your contacts.",
+      i18n.t('safeCheckin.notificationTitle'),
+      i18n.t('safeCheckin.notificationBody'),
       intervalMinutes * 60,
       { type: 'safe_checkin' },
     );

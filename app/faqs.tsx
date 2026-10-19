@@ -100,7 +100,7 @@ export default function FaqsScreen(): React.JSX.Element {
           placeholder={t('info.search')}
           placeholderTextColor={COLORS.STONE}
           clearButtonMode="while-editing"
-          className="mb-3 h-11 rounded-xl border border-stone/20 bg-white px-4 text-[16px] text-ink"
+          className="mb-3 h-11 rounded-xl border border-stone/20 bg-white px-4 text-[16px] text-ink dark:border-dark-border dark:bg-charcoal dark:text-white"
         />
 
         <CategoryFilter

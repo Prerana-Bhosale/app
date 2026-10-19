@@ -70,3 +70,54 @@ export async function getCachedUserInfo(): Promise<OfflineUserCache | null> {
     return null;
   }
 }
+
+/**
+ * Caches a journey session ID marked arrived locally/offline to prevent the watchdog
+ * from triggering an overdue emergency alert if the device is currently without network.
+ */
+export async function markSafeJourneyArrivedOffline(sessionId: string): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEYS.SAFE_JOURNEY_ARRIVED_SESSIONS);
+    const set = new Set<string>(raw !== null ? (JSON.parse(raw) as string[]) : []);
+    set.add(sessionId);
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.SAFE_JOURNEY_ARRIVED_SESSIONS,
+      JSON.stringify([...set]),
+    );
+  } catch (error) {
+    captureException(error);
+  }
+}
+
+/**
+ * Checks whether a given journey session ID has already been marked as safely arrived locally.
+ */
+export async function isSafeJourneyArrivedOffline(sessionId: string): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEYS.SAFE_JOURNEY_ARRIVED_SESSIONS);
+    if (raw === null) return false;
+    const ids = JSON.parse(raw) as string[];
+    return Array.isArray(ids) && ids.includes(sessionId);
+  } catch (error) {
+    console.warn('isSafeJourneyArrivedOffline: error reading cache', error);
+    return false;
+  }
+}
+
+/**
+ * Clears an arrived journey session ID once it has been successfully synced to the backend.
+ */
+export async function clearSafeJourneyArrivedOffline(sessionId: string): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEYS.SAFE_JOURNEY_ARRIVED_SESSIONS);
+    if (raw === null) return;
+    const set = new Set<string>(JSON.parse(raw) as string[]);
+    set.delete(sessionId);
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.SAFE_JOURNEY_ARRIVED_SESSIONS,
+      JSON.stringify([...set]),
+    );
+  } catch (error) {
+    captureException(error);
+  }
+}

@@ -118,7 +118,7 @@ export default function TipsScreen(): React.JSX.Element {
             return (
               <View className="w-1/2 p-1.5">
                 <Card padding="md" className="flex-1">
-                  <View className="h-10 w-10 items-center justify-center rounded-full bg-off-white">
+                  <View className="h-10 w-10 items-center justify-center rounded-full bg-off-white dark:bg-dark-border">
                     <MaterialIcons name={icon.name} size={20} color={icon.color} />
                   </View>
                   <Text variant="label" className="mb-1 mt-3">

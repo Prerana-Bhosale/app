@@ -12,6 +12,7 @@ import { captureException } from '@/config/sentry';
 import { COLORS } from '@/constants/colors';
 import { ROUTES } from '@/constants/routes';
 import { ICON_SIZE } from '@/constants/ui';
+import { useTheme } from '@/hooks/useTheme';
 import { trackInfoSectionOpened, type InfoSection } from '@/services/analytics.service';
 import { CACHE_KEYS, getCacheTimestamp } from '@/utils/cache.utils';
 import { formatTimestamp } from '@/utils/date.utils';
@@ -67,6 +68,7 @@ const ALL_CACHE_KEYS = [CACHE_KEYS.LAWS, CACHE_KEYS.FAQS, CACHE_KEYS.TIPS, CACHE
 export default function InfoScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
+  const { colors } = useTheme();
   const [lastSyncDate, setLastSyncDate] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -99,22 +101,26 @@ export default function InfoScreen(): React.JSX.Element {
           >
             <Card padding="lg" className="mb-3">
               <View className="flex-row items-center gap-4">
-                <View className="h-14 w-14 items-center justify-center rounded-2xl bg-off-white">
+                <View className="h-14 w-14 items-center justify-center rounded-2xl bg-off-white dark:bg-dark-border">
                   <MaterialIcons name={section.icon} size={28} color={section.color} />
                 </View>
                 <View className="flex-1">
                   <Text variant="label" tKey={section.labelKey} />
                   <Text variant="caption" tKey={section.subtitleKey} />
                 </View>
-                <MaterialIcons name="chevron-right" size={ICON_SIZE.CHEVRON} color={COLORS.STONE} />
+                <MaterialIcons
+                  name="chevron-right"
+                  size={ICON_SIZE.CHEVRON}
+                  color={colors.textSecondary}
+                />
               </View>
             </Card>
           </Pressable>
         ))}
 
         {lastSyncDate !== null && (
-          <View className="mt-4 flex-row items-center gap-2 rounded-xl bg-off-white p-3">
-            <MaterialIcons name="offline-pin" size={16} color={COLORS.STONE} />
+          <View className="mt-4 flex-row items-center gap-2 rounded-xl border border-transparent bg-off-white p-3 dark:border-dark-border dark:bg-charcoal">
+            <MaterialIcons name="offline-pin" size={16} color={colors.textSecondary} />
             <Text variant="caption" className="flex-1">
               {t('info.lastSynced', { date: formatTimestamp(lastSyncDate) })}
             </Text>

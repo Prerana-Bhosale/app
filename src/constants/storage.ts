@@ -51,6 +51,11 @@ export const STORAGE_KEYS = {
    * find links to their own past uploads again on this device.
    */
   EVIDENCE_RECORDING_HISTORY: 'surakshak_evidence_recording_history',
+  /**
+   * `JSON.stringify`'d string[] of Safe Journey session IDs marked arrived locally/offline,
+   * preventing the watchdog from firing false-alarm overdue emergency alerts.
+   */
+  SAFE_JOURNEY_ARRIVED_SESSIONS: 'surakshak_safe_journey_arrived_sessions',
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
@@ -66,6 +71,7 @@ export const SENSITIVE_STORAGE_KEYS = [
   STORAGE_KEYS.SMS_HISTORY,
   STORAGE_KEYS.EVIDENCE_RECORDING_HISTORY,
   STORAGE_KEYS.LIVE_LOCATION_SESSION_ID,
+  STORAGE_KEYS.SAFE_JOURNEY_ARRIVED_SESSIONS,
   STORAGE_KEYS.CHECKIN_ACTIVE,
   STORAGE_KEYS.CHECKIN_INTERVAL_MINUTES,
   STORAGE_KEYS.CHECKIN_NEXT_AT,

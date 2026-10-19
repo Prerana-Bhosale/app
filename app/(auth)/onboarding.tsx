@@ -3,10 +3,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Alert, Platform, Pressable, View } from 'react-native';
+import { Alert, AppState, Linking, Platform, Pressable, View } from 'react-native';
 import { z } from 'zod';
 
 import { ContactFormModal } from '@/components/features/emergency/ContactFormModal';
@@ -56,6 +56,7 @@ import type { EmergencyContactFormValues } from '@/types/emergency.types';
 import type { EmergencyContact, Language } from '@/types/user.types';
 import { cacheEmergencyContacts } from '@/utils/offline-cache.utils';
 import {
+  checkAllPermissions,
   requestCameraPermission,
   requestContactsPermission,
   requestLocationPermission,
@@ -194,10 +195,43 @@ export default function OnboardingScreen(): React.JSX.Element {
     }
   }
 
+  const refreshPermissions = useCallback(async (): Promise<void> => {
+    try {
+      const statuses = await checkAllPermissions();
+      const grantedKeys = (Object.keys(statuses) as PermissionKey[]).filter(
+        (key) => statuses[key] === true,
+      );
+      setGrantedPermissions((previous) => {
+        const next = new Set([...previous, ...grantedKeys]);
+        return [...next];
+      });
+    } catch (error) {
+      captureException(error);
+    }
+  }, []);
+
+  useEffect((): (() => void) | undefined => {
+    if (step !== PERMISSIONS_STEP) return undefined;
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        void refreshPermissions();
+      }
+    });
+    return (): void => subscription.remove();
+  }, [step, refreshPermissions]);
+
   function handleContinueFromPermissions(): void {
     const requiredGranted = REQUIRED_PERMISSIONS.every((key) => grantedPermissions.includes(key));
     if (!requiredGranted) {
-      Alert.alert(t('onboarding.cannotSkipRequired'));
+      Alert.alert(t('onboarding.cannotSkipRequired'), t('onboarding.openSettingsPrompt'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.openSettings'),
+          onPress: (): void => {
+            void Linking.openSettings();
+          },
+        },
+      ]);
       return;
     }
     setStep(PROFILE_STEP);
@@ -421,12 +455,24 @@ export default function OnboardingScreen(): React.JSX.Element {
                     color={COLORS.SHAKTI_PURPLE}
                   />
                   <View className="flex-1">
-                    <Text variant="label" tKey={item.titleKey} className="text-ink" />
-                    <Text variant="caption" tKey={item.reasonKey} className="text-stone" />
+                    <Text
+                      variant="label"
+                      tKey={item.titleKey}
+                      className="text-ink dark:text-white"
+                    />
+                    <Text
+                      variant="caption"
+                      tKey={item.reasonKey}
+                      className="text-stone dark:text-dark-text-secondary"
+                    />
                     <Text
                       variant="caption"
                       tKey={item.required ? 'onboarding.required' : 'onboarding.recommended'}
-                      className={item.required ? 'text-primary-red' : 'text-stone'}
+                      className={
+                        item.required
+                          ? 'text-primary-red'
+                          : 'text-stone dark:text-dark-text-secondary'
+                      }
                     />
                   </View>
                   {isGranted ? (

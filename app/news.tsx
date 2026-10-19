@@ -100,7 +100,7 @@ export default function NewsScreen(): React.JSX.Element {
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} />}
           renderItem={({ item }) => (
             <Pressable onPress={() => router.push(`${ROUTES.NEWS}/${item.id}`)}>
-              <View className="mb-3 overflow-hidden rounded-2xl bg-white shadow-sm">
+              <View className="mb-3 overflow-hidden rounded-2xl border border-transparent bg-white shadow-sm dark:border-dark-border dark:bg-charcoal">
                 {item.imageUrl !== '' && (
                   <Image
                     source={{ uri: item.imageUrl }}

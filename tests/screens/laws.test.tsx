@@ -68,4 +68,18 @@ describe('LawsScreen', () => {
     const { getAllByText } = await render(<LawsScreen />);
     expect(getAllByText('Workplace Safety').length).toBeGreaterThan(0);
   });
+
+  it('renders empty state without search subtitle when no laws exist initially', async () => {
+    mockGetLaws.mockResolvedValue([]);
+    const { getByText, queryByText } = await render(<LawsScreen />);
+    expect(getByText('No laws found')).toBeTruthy();
+    expect(queryByText('Try a different search term or category')).toBeNull();
+  });
+
+  it('renders empty state with search subtitle when search query has no match', async () => {
+    const { getByPlaceholderText, getByText } = await render(<LawsScreen />);
+    await fireEvent.changeText(getByPlaceholderText('Search'), 'nonexistent query 123');
+    expect(getByText('No laws found')).toBeTruthy();
+    expect(getByText('Try a different search term or category')).toBeTruthy();
+  });
 });

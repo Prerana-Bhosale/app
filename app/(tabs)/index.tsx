@@ -9,7 +9,6 @@ import { FakeCallScheduler } from '@/components/features/emergency/FakeCallSched
 import { IncomingCallOverlay } from '@/components/features/emergency/IncomingCallOverlay';
 import { QuickActionCard } from '@/components/features/emergency/QuickActionCard';
 import { SOSButton } from '@/components/features/sos/SOSButton';
-import { SOSCountdownOverlay } from '@/components/features/sos/SOSCountdownOverlay';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
@@ -42,7 +41,7 @@ export default function HomeScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
 
-  const { isActive, countdown, isSending, handleTap, trigger, cancel } = useSOS();
+  const { isActive, handleTap, trigger } = useSOS();
   const sosOutcome = useSOSStore((state) => state.lastOutcome);
   const setSosOutcome = useSOSStore((state) => state.setLastOutcome);
   const siren = useSiren();
@@ -62,6 +61,17 @@ export default function HomeScreen(): React.JSX.Element {
   const [iosHintDismissed, setIosHintDismissed] = useState(true);
 
   const safeCheckin = useSafeCheckin();
+
+  const callHelpline = useCallback(
+    (phone: string): void => {
+      trackEmergencyCallPlaced('predefined');
+      placeCall(phone).catch((error: unknown) => {
+        captureException(error);
+        Alert.alert(t('errors.callFailed'));
+      });
+    },
+    [t],
+  );
 
   useEffect(() => {
     AsyncStorage.multiGet([STORAGE_KEYS.SHAKE_ENABLED, STORAGE_KEYS.FOLLOW_DETECTION_ENABLED])
@@ -91,16 +101,45 @@ export default function HomeScreen(): React.JSX.Element {
   // made BUG-006 invisible to the person who pressed the button.
   useEffect(() => {
     if (sosOutcome === null) return;
-    const { sent, failed } = sosOutcome;
-    const body =
-      sent === 0 && failed === 0
-        ? t('home.sosResultNoContacts')
-        : failed === 0
-          ? t('home.sosResultSent', { count: sent })
-          : t('home.sosResultPartial', { sent, failed });
-    Alert.alert(t('home.sosResultTitle'), body);
+    const { sent, failed, error } = sosOutcome;
+
+    if (error === 'failed' || (sent === 0 && failed > 0)) {
+      Alert.alert(t('home.sosResultTitle'), t('home.sosResultFailed'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.retry'), onPress: (): void => trigger('button') },
+        {
+          text: t('emergency.callEmergency112'),
+          style: 'destructive',
+          onPress: (): void => callHelpline('112'),
+        },
+      ]);
+    } else if (error === 'no_contacts' || (sent === 0 && failed === 0)) {
+      Alert.alert(t('home.sosResultTitle'), t('home.sosResultNoContacts'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('home.emergencyContacts'),
+          onPress: (): void => router.push(ROUTES.EMERGENCY_CONTACTS),
+        },
+        {
+          text: t('emergency.callEmergency112'),
+          style: 'destructive',
+          onPress: (): void => callHelpline('112'),
+        },
+      ]);
+    } else if (failed === 0) {
+      Alert.alert(t('home.sosResultTitle'), t('home.sosResultSent', { count: sent }));
+    } else {
+      Alert.alert(t('home.sosResultTitle'), t('home.sosResultPartial', { sent, failed }), [
+        { text: t('common.ok'), style: 'default' },
+        {
+          text: t('emergency.callEmergency112'),
+          style: 'destructive',
+          onPress: (): void => callHelpline('112'),
+        },
+      ]);
+    }
     setSosOutcome(null);
-  }, [sosOutcome, setSosOutcome, t]);
+  }, [sosOutcome, setSosOutcome, t, trigger, callHelpline, router]);
 
   useEffect(() => {
     if (!safeCheckin.isActive) return;
@@ -114,14 +153,6 @@ export default function HomeScreen(): React.JSX.Element {
 
   useShakeDetection(handleShake, shakeEnabled && !isActive);
   useSuspiciousFollow(followEnabled && !isActive);
-
-  function callHelpline(phone: string): void {
-    trackEmergencyCallPlaced('predefined');
-    placeCall(phone).catch((error: unknown) => {
-      captureException(error);
-      Alert.alert(t('errors.callFailed'));
-    });
-  }
 
   function scheduleFakeCall(delaySeconds: number, callerName: string): void {
     void fakeCall.scheduleCall(delaySeconds, callerName);
@@ -268,7 +299,8 @@ export default function HomeScreen(): React.JSX.Element {
                 name: contact.name,
                 phone: contact.phone,
               })}
-              className="mr-3 flex-row items-center rounded-full border border-stone/20 bg-white px-4 py-2 dark:border-dark-border dark:bg-charcoal"
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+              className="mr-3 min-h-[44px] flex-row items-center rounded-full border border-stone/20 bg-white px-4 py-2 dark:border-dark-border dark:bg-charcoal"
             >
               <Text variant="caption" className="text-ink dark:text-white">
                 {contact.name} · {contact.phone}
@@ -295,10 +327,6 @@ export default function HomeScreen(): React.JSX.Element {
           </Card>
         )}
       </SafeScreen>
-
-      {isActive && (
-        <SOSCountdownOverlay countdown={countdown} isSending={isSending} onCancel={cancel} />
-      )}
 
       <FakeCallScheduler
         visible={fakeCallModalVisible}

@@ -18,9 +18,9 @@ import {
   PHONE_LAST_DIGITS,
   PHONE_PREFIX_LABEL,
 } from '@/constants/auth';
-import { COLORS } from '@/constants/colors';
 import { ROUTES } from '@/constants/routes';
 import { ICON_SIZE } from '@/constants/ui';
+import { useTheme } from '@/hooks/useTheme';
 import { ANALYTICS_EVENTS, trackEvent } from '@/services/analytics.service';
 import { AuthError, sendOtp } from '@/services/firebase/auth.service';
 
@@ -50,13 +50,14 @@ type PhoneForm = z.infer<typeof schema>;
 export default function PhoneScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
+  const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const phoneInputRef = useRef<TextInput | null>(null);
 
   const {
     control,
     handleSubmit,
-    setError,
     formState: { errors, isValid },
   } = useForm<PhoneForm>({
     resolver: zodResolver(schema),
@@ -76,6 +77,7 @@ export default function PhoneScreen(): React.JSX.Element {
 
   async function handleSendOtp({ phone }: PhoneForm): Promise<void> {
     setIsLoading(true);
+    setSubmitError(null);
     try {
       const confirmation = await sendOtp(phone);
       setStoredConfirmation(confirmation);
@@ -85,9 +87,7 @@ export default function PhoneScreen(): React.JSX.Element {
         params: { phone: `${PHONE_E164_PREFIX}${phone}` },
       });
     } catch (error) {
-      setError('phone', {
-        message: error instanceof AuthError ? error.i18nKey : 'errors.generic',
-      });
+      setSubmitError(error instanceof AuthError ? error.i18nKey : 'errors.generic');
     } finally {
       setIsLoading(false);
     }
@@ -104,15 +104,19 @@ export default function PhoneScreen(): React.JSX.Element {
           accessibilityRole="button"
           accessibilityLabel={t('common.back')}
         >
-          <MaterialIcons name="arrow-back" size={ICON_SIZE.BACK} color={COLORS.DEEP_INK} />
+          <MaterialIcons name="arrow-back" size={ICON_SIZE.BACK} color={colors.textPrimary} />
         </Pressable>
 
         <Text variant="h2" tKey="auth.enterPhone" className="mb-2 mt-6" />
-        <Text variant="caption" tKey="auth.phonePlaceholder" className="text-stone" />
+        <Text
+          variant="caption"
+          tKey="auth.phonePlaceholder"
+          className="text-stone dark:text-dark-text-secondary"
+        />
 
-        <View className="mt-6 h-14 flex-row items-center rounded-xl border border-stone/30 px-4">
-          <RNText className="mr-2 text-base text-ink">{PHONE_PREFIX_LABEL}</RNText>
-          <View className="mr-2 h-6 w-px bg-stone/30" />
+        <View className="mt-6 h-14 flex-row items-center rounded-xl border border-stone/30 bg-white px-4 dark:border-dark-border dark:bg-charcoal">
+          <RNText className="mr-2 text-base text-ink dark:text-white">{PHONE_PREFIX_LABEL}</RNText>
+          <View className="mr-2 h-6 w-px bg-stone/30 dark:bg-dark-border" />
           <Controller
             control={control}
             name="phone"
@@ -125,14 +129,17 @@ export default function PhoneScreen(): React.JSX.Element {
                 // Font size only, not `text-base` — see Input.tsx's note on
                 // why a coupled lineHeight fights iOS's single-line
                 // TextInput auto-centering.
-                className="flex-1 text-[16px] text-ink"
+                className="flex-1 text-[16px] text-ink dark:text-white"
                 keyboardType="phone-pad"
                 maxLength={PHONE_DIGITS}
                 placeholder={t('auth.phonePlaceholder')}
-                placeholderTextColor={COLORS.STONE}
+                placeholderTextColor={colors.textSecondary}
                 value={field.value}
                 onBlur={field.onBlur}
-                onChangeText={(text) => field.onChange(text.replace(/\D/g, ''))}
+                onChangeText={(text) => {
+                  if (submitError !== null) setSubmitError(null);
+                  field.onChange(text.replace(/\D/g, ''));
+                }}
                 accessibilityLabel={t('auth.phoneLabel')}
               />
             )}
@@ -142,6 +149,10 @@ export default function PhoneScreen(): React.JSX.Element {
         {phoneError !== undefined ? (
           <Text variant="caption" className="mt-1 text-error-red">
             {t(phoneError)}
+          </Text>
+        ) : submitError !== null ? (
+          <Text variant="caption" className="mt-1 text-error-red">
+            {t(submitError)}
           </Text>
         ) : null}
 

@@ -67,4 +67,29 @@ describe('PhoneScreen', () => {
 
     expect(await findByText('Too many attempts. Please wait before trying again.')).toBeTruthy();
   });
+
+  it('keeps the Send OTP button enabled after a network failure, allowing immediate retry', async () => {
+    jest.mocked(sendOtp).mockRejectedValueOnce(new AuthError('errors.networkError'));
+
+    const { getByPlaceholderText, getByText, findByText } = await render(<PhoneScreen />);
+    const input = getByPlaceholderText('10-digit mobile number');
+    const sendButton = getByText('Send OTP');
+
+    await fireEvent.changeText(input, '9876543210');
+
+    await fireEvent.press(sendButton);
+    await waitFor(() => {
+      expect(sendOtp).toHaveBeenCalledTimes(1);
+    });
+
+    expect(await findByText('No internet connection. Please try again.')).toBeTruthy();
+
+    // Immediate retry without modifying input
+    jest.mocked(sendOtp).mockResolvedValueOnce({ confirm: jest.fn() } as never);
+    await fireEvent.press(sendButton);
+
+    await waitFor(() => {
+      expect(sendOtp).toHaveBeenCalledTimes(2);
+    });
+  });
 });

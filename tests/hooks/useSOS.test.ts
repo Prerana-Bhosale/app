@@ -40,8 +40,11 @@ describe('useSOS', () => {
     useSOSStore.getState().reset();
   });
 
-  afterEach(() => {
-    jest.runOnlyPendingTimers();
+  afterEach(async () => {
+    await act(() => {
+      useSOSStore.getState().reset();
+      jest.clearAllTimers();
+    });
     jest.useRealTimers();
     Platform.OS = 'ios';
   });
@@ -178,7 +181,35 @@ describe('useSOS', () => {
     });
     await elapseCountdown();
 
-    expect(useSOSStore.getState().lastOutcome).toEqual({ sent: 1, failed: 1 });
+    expect(useSOSStore.getState().lastOutcome).toEqual({ sent: 1, failed: 1, error: null });
+  });
+
+  it('records error: failed when the dispatch throws an exception', async () => {
+    jest.mocked(smsService.sendSOSAlert).mockRejectedValueOnce(new Error('Network failure'));
+    const { result } = await renderHook(() => useSOS());
+
+    await act(() => {
+      result.current.trigger('button');
+    });
+    await elapseCountdown();
+
+    expect(useSOSStore.getState().lastOutcome).toEqual({ sent: 0, failed: 0, error: 'failed' });
+  });
+
+  it('multiple mounted hook instances do not run duplicate intervals', async () => {
+    const hook1 = await renderHook(() => useSOS());
+    const hook2 = await renderHook(() => useSOS());
+
+    await act(() => {
+      hook1.result.current.trigger('button');
+    });
+    await act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    // Decremented exactly once (from 5 to 4), not twice
+    expect(hook1.result.current.countdown).toBe(APP_CONFIG.SOS_COUNTDOWN_SECONDS - 1);
+    expect(hook2.result.current.countdown).toBe(APP_CONFIG.SOS_COUNTDOWN_SECONDS - 1);
   });
 
   it('still sends, without a location, when no fix is available', async () => {

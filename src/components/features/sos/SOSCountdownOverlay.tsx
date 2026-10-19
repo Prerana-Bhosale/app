@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 
 import { Spinner } from '@/components/ui/Spinner';
 import { Text } from '@/components/ui/Text';
@@ -26,39 +26,45 @@ export function SOSCountdownOverlay({
 }: SOSCountdownOverlayProps): React.JSX.Element {
   const { t } = useTranslation();
 
-  if (isSending) {
-    return (
-      <View
-        className="absolute inset-0 items-center justify-center bg-near-black/90 px-8"
-        accessibilityLiveRegion="polite"
-      >
-        <Spinner size="lg" color={COLORS.WHITE} />
-        <Text variant="h3" tKey="home.sosSending" className="mt-6 text-center text-white" />
-      </View>
-    );
-  }
-
   return (
-    <View className="absolute inset-0 items-center justify-center bg-near-black/90 px-8">
-      <Text variant="h1" className="text-6xl text-white">
-        {String(countdown)}
-      </Text>
-      <Text
-        variant="body"
-        tKey="home.sosCountdown"
-        tOptions={{ count: countdown }}
-        className="mt-3 text-center text-white"
-      />
-      <Pressable
-        onPress={onCancel}
-        accessibilityRole="button"
-        accessibilityLabel={t('home.sosCancel')}
-        className="mt-8 rounded-full bg-white px-8 py-4"
-      >
-        <Text variant="h3" className="text-error-red">
-          {t('home.sosCancel')}
-        </Text>
-      </Pressable>
-    </View>
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={isSending ? undefined : onCancel}
+    >
+      {isSending ? (
+        <View
+          className="flex-1 items-center justify-center bg-near-black/90 px-8"
+          accessibilityLiveRegion="polite"
+        >
+          <Spinner size="lg" color={COLORS.WHITE} />
+          <Text variant="h3" tKey="home.sosSending" className="mt-6 text-center text-white" />
+        </View>
+      ) : (
+        <View className="flex-1 items-center justify-center bg-near-black/90 px-8">
+          <Text variant="h1" className="text-6xl text-white">
+            {String(countdown)}
+          </Text>
+          <Text
+            variant="body"
+            tKey="home.sosCountdown"
+            tOptions={{ count: countdown }}
+            className="mt-3 text-center text-white"
+          />
+          <Pressable
+            onPress={onCancel}
+            accessibilityRole="button"
+            accessibilityLabel={t('home.sosCancel')}
+            className="mt-8 rounded-full bg-white px-8 py-4"
+          >
+            <Text variant="h3" className="text-error-red">
+              {t('home.sosCancel')}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+    </Modal>
   );
 }

@@ -63,39 +63,43 @@ export function useSuspiciousFollow(enabled: boolean): void {
       const permission = await Location.getForegroundPermissionsAsync();
       if (!permission.granted) return;
 
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      const snapshot: LocationSnapshot = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        timestamp: Date.now(),
-      };
+      try {
+        const position = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        const snapshot: LocationSnapshot = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          timestamp: Date.now(),
+        };
 
-      const cutoff = Date.now() - HISTORY_WINDOW_MINUTES * MS_PER_MINUTE;
-      historyRef.current = [
-        ...historyRef.current.filter((entry) => entry.timestamp > cutoff),
-        snapshot,
-      ];
+        const cutoff = Date.now() - HISTORY_WINDOW_MINUTES * MS_PER_MINUTE;
+        historyRef.current = [
+          ...historyRef.current.filter((entry) => entry.timestamp > cutoff),
+          snapshot,
+        ];
 
-      if (historyRef.current.length < MIN_SNAPSHOTS_FOR_MOVEMENT_CHECK) return;
+        if (historyRef.current.length < MIN_SNAPSHOTS_FOR_MOVEMENT_CHECK) return;
 
-      const oldest = historyRef.current[0];
-      if (oldest === undefined) return;
-      const totalMovement = metersBetween(oldest, snapshot);
-      if (totalMovement < APP_CONFIG.FOLLOW_MIN_MOVEMENT_METERS) return;
+        const oldest = historyRef.current[0];
+        if (oldest === undefined) return;
+        const totalMovement = metersBetween(oldest, snapshot);
+        if (totalMovement < APP_CONFIG.FOLLOW_MIN_MOVEMENT_METERS) return;
 
-      const followCutoff = Date.now() - APP_CONFIG.FOLLOW_DURATION_MINUTES * MS_PER_MINUTE;
-      const recentHistory = historyRef.current.filter((entry) => entry.timestamp > followCutoff);
-      if (recentHistory.length < MIN_SNAPSHOTS_FOR_FOLLOW_CHECK) return;
+        const followCutoff = Date.now() - APP_CONFIG.FOLLOW_DURATION_MINUTES * MS_PER_MINUTE;
+        const recentHistory = historyRef.current.filter((entry) => entry.timestamp > followCutoff);
+        if (recentHistory.length < MIN_SNAPSHOTS_FOR_FOLLOW_CHECK) return;
 
-      const allWithinRadius = recentHistory.every(
-        (entry) => metersBetween(entry, snapshot) <= APP_CONFIG.FOLLOW_RADIUS_METERS,
-      );
-      if (!allWithinRadius) return;
+        const allWithinRadius = recentHistory.every(
+          (entry) => metersBetween(entry, snapshot) <= APP_CONFIG.FOLLOW_RADIUS_METERS,
+        );
+        if (!allWithinRadius) return;
 
-      alertFiredRef.current = true;
-      await triggerFollowAlert();
+        alertFiredRef.current = true;
+        await triggerFollowAlert();
+      } catch (error) {
+        console.warn('useSuspiciousFollow: could not get position fix:', error);
+      }
     }
 
     const interval = setInterval(

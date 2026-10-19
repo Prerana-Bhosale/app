@@ -67,7 +67,9 @@ export function FakeCallScheduler({
               key={seconds}
               onPress={() => setSelected(seconds)}
               accessibilityRole="button"
-              className={`rounded-full border px-4 py-2 ${
+              accessibilityState={{ selected: isSelected }}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+              className={`min-h-[44px] items-center justify-center rounded-full border px-4 py-2 ${
                 isSelected ? 'border-shakti-purple bg-shakti-purple/10' : 'border-stone/30'
               }`}
             >
@@ -78,7 +80,9 @@ export function FakeCallScheduler({
         <Pressable
           onPress={() => setSelected(CUSTOM)}
           accessibilityRole="button"
-          className={`rounded-full border px-4 py-2 ${
+          accessibilityState={{ selected: selected === CUSTOM }}
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          className={`min-h-[44px] items-center justify-center rounded-full border px-4 py-2 ${
             selected === CUSTOM ? 'border-shakti-purple bg-shakti-purple/10' : 'border-stone/30'
           }`}
         >

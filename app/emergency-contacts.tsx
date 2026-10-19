@@ -114,7 +114,7 @@ export default function EmergencyContactsScreen(): React.JSX.Element {
             })
             .catch((error: unknown) => {
               captureException(error);
-              Alert.alert(t('errors.contactSaveFailed'));
+              Alert.alert(t('errors.contactDeleteFailed'));
             });
         },
       },
@@ -259,6 +259,14 @@ export default function EmergencyContactsScreen(): React.JSX.Element {
                   hitSlop={12}
                 >
                   <Ionicons name="call" size={ICON_SIZE.CHEVRON} color={COLORS.WHITE} />
+                </Pressable>
+                <Pressable
+                  onPress={() => openEdit(contact)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('emergency.editContact')}
+                  hitSlop={DANGER_ROW_HITSLOP}
+                >
+                  <MaterialIcons name="edit" size={ICON_SIZE.ROW} color={COLORS.STONE} />
                 </Pressable>
                 <Pressable
                   onPress={() => confirmDelete(contact)}

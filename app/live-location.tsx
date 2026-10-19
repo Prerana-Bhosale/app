@@ -163,7 +163,9 @@ export default function LiveLocationScreen(): React.JSX.Element {
                     key={hours}
                     onPress={() => setSelectedDuration(hours)}
                     accessibilityRole="button"
-                    className={`rounded-full border px-4 py-2 ${
+                    accessibilityState={{ selected }}
+                    hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                    className={`min-h-[44px] items-center justify-center rounded-full border px-4 py-2 ${
                       selected ? 'border-shakti-purple bg-shakti-purple' : 'border-stone/40'
                     }`}
                   >

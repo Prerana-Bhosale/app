@@ -255,7 +255,6 @@ export async function fetchNearbyPlaces(
       }))
       .sort((a, b) => a.distanceKm - b.distanceKm);
   } catch (error) {
-    console.error('fetchNearbyPlaces failed:', error);
     throw error;
   }
 }

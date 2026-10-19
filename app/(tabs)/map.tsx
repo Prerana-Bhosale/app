@@ -83,7 +83,9 @@ export default function MapScreen(): React.JSX.Element {
   );
 
   useEffect(() => {
-    void requestPermission();
+    void requestPermission().catch((error: unknown) => {
+      console.warn('MapScreen: requestPermission failed:', error);
+    });
   }, [requestPermission]);
 
   useEffect(() => {

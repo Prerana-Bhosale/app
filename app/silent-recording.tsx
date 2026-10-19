@@ -331,8 +331,8 @@ export default function SilentRecordingScreen(): React.JSX.Element {
         <ScreenHeader titleKey="screens.silentRecording" />
 
         <View className="mt-4 flex-1 items-center justify-center px-2">
-          <View className="mb-4">
-            <MaterialIcons name="fiber-manual-record" size={80} color={COLORS.STONE} />
+          <View className="mb-4 h-24 w-24 items-center justify-center rounded-full bg-shakti-purple/10">
+            <MaterialIcons name="mic" size={56} color={COLORS.SHAKTI_PURPLE} />
           </View>
           <Text variant="h2" tKey="silentRecording.title" className="mb-2 text-center" />
           <Text

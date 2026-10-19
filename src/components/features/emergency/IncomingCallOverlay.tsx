@@ -126,34 +126,47 @@ export function IncomingCallOverlay({
           )}
         </View>
 
-        <View className="w-full flex-row justify-around">
+        <View className="w-full max-w-sm flex-row justify-around self-center">
           {answered ? (
-            <Pressable
-              onPress={onDecline}
-              accessibilityRole="button"
-              accessibilityLabel={t('emergency.endCall')}
-              className="h-16 w-16 items-center justify-center rounded-full bg-error-red"
-            >
-              <Ionicons name="call" size={CALL_BUTTON_ICON_SIZE} color={COLORS.WHITE} />
-            </Pressable>
-          ) : (
-            <>
+            <View className="items-center">
               <Pressable
                 onPress={onDecline}
                 accessibilityRole="button"
-                accessibilityLabel={t('emergency.decline')}
-                className="h-16 w-16 items-center justify-center rounded-full bg-error-red"
+                accessibilityLabel={t('emergency.endCall')}
+                className="h-20 w-20 items-center justify-center rounded-full bg-error-red shadow-lg active:opacity-80"
               >
-                <Ionicons name="call" size={CALL_BUTTON_ICON_SIZE} color={COLORS.WHITE} />
+                <View style={{ transform: [{ rotate: '135deg' }] }}>
+                  <Ionicons name="call" size={36} color={COLORS.WHITE} />
+                </View>
               </Pressable>
-              <Pressable
-                onPress={handleAnswer}
-                accessibilityRole="button"
-                accessibilityLabel={t('emergency.answer')}
-                className="h-16 w-16 items-center justify-center rounded-full bg-forest-green"
-              >
-                <Ionicons name="call" size={CALL_BUTTON_ICON_SIZE} color={COLORS.WHITE} />
-              </Pressable>
+              <Text variant="caption" tKey="emergency.endCall" className="mt-3 text-stone-300" />
+            </View>
+          ) : (
+            <>
+              <View className="items-center">
+                <Pressable
+                  onPress={onDecline}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('emergency.decline')}
+                  className="h-16 w-16 items-center justify-center rounded-full bg-error-red active:opacity-80"
+                >
+                  <View style={{ transform: [{ rotate: '135deg' }] }}>
+                    <Ionicons name="call" size={CALL_BUTTON_ICON_SIZE} color={COLORS.WHITE} />
+                  </View>
+                </Pressable>
+                <Text variant="caption" tKey="emergency.decline" className="mt-3 text-stone-300" />
+              </View>
+              <View className="items-center">
+                <Pressable
+                  onPress={handleAnswer}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('emergency.answer')}
+                  className="h-16 w-16 items-center justify-center rounded-full bg-forest-green active:opacity-80"
+                >
+                  <Ionicons name="call" size={CALL_BUTTON_ICON_SIZE} color={COLORS.WHITE} />
+                </Pressable>
+                <Text variant="caption" tKey="emergency.answer" className="mt-3 text-stone-300" />
+              </View>
             </>
           )}
         </View>

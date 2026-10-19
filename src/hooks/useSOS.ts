@@ -18,6 +18,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useSOSStore } from '@/stores/sos.store';
 import { useUserStore } from '@/stores/user.store';
 import type { SOSTriggerMethod } from '@/types/emergency.types';
+import { metroLogger } from '@/utils/logger.utils';
 import { getCachedEmergencyContacts, getCachedUserInfo } from '@/utils/offline-cache.utils';
 import { requestSmsPermission } from '@/utils/permissions.utils';
 
@@ -33,6 +34,24 @@ export interface UseSOSResult {
   trigger: (method: SOSTriggerMethod) => void;
   cancel: () => void;
 }
+
+let activeInterval: ReturnType<typeof setInterval> | null = null;
+let activeMethod: SOSTriggerMethod | null = null;
+let activePermissionPromise: Promise<void> | null = null;
+
+function clearActiveTimer(): void {
+  if (activeInterval !== null) {
+    clearInterval(activeInterval);
+    activeInterval = null;
+  }
+}
+
+// Automatically clear the running timer if the store transitions to inactive from any caller.
+useSOSStore.subscribe((state) => {
+  if (!state.isActive && activeInterval !== null) {
+    clearActiveTimer();
+  }
+});
 
 /**
  * Owns the SOS lifecycle: triple-tap detection, the countdown timer, and the
@@ -50,17 +69,7 @@ export function useSOS(): UseSOSResult {
   const setLastOutcome = useSOSStore((state) => state.setLastOutcome);
   const reset = useSOSStore((state) => state.reset);
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tapTimestampsRef = useRef<number[]>([]);
-  const methodRef = useRef<SOSTriggerMethod | null>(null);
-  const permissionRef = useRef<Promise<void> | null>(null);
-
-  const clearTimer = useCallback((): void => {
-    if (intervalRef.current !== null) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, []);
 
   /**
    * Android's silent send needs a runtime `SEND_SMS` grant. Ask while the
@@ -69,7 +78,7 @@ export function useSOS(): UseSOSResult {
    */
   const ensureSmsPermission = useCallback((): void => {
     if (Platform.OS !== 'android') return;
-    permissionRef.current = (async (): Promise<void> => {
+    activePermissionPromise = (async (): Promise<void> => {
       try {
         if (!(await checkSmsPermission())) await requestSmsPermission();
       } catch (error) {
@@ -111,7 +120,7 @@ export function useSOS(): UseSOSResult {
       // Give a still-open SMS permission dialog the same bounded window as
       // the location fix; an unanswered dialog falls back to the compose sheet.
       const permission = Promise.race([
-        permissionRef.current ?? Promise.resolve(),
+        activePermissionPromise ?? Promise.resolve(),
         new Promise<void>((resolve) => setTimeout(resolve, APP_CONFIG.ALERT_LOCATION_TIMEOUT_MS)),
       ]);
       await Promise.all([locate, permission]);
@@ -124,13 +133,25 @@ export function useSOS(): UseSOSResult {
         contactsFailed: result.failed,
       });
       trackSmsAlertSent('sos', result.sent.length, result.failed.length);
-      setLastOutcome({ sent: result.sent.length, failed: result.failed.length });
+      const isFailed = result.sent.length === 0 && result.failed.length > 0;
+      const isNoContacts = result.sent.length === 0 && result.failed.length === 0;
+      setLastOutcome({
+        sent: result.sent.length,
+        failed: result.failed.length,
+        error: isFailed ? 'failed' : isNoContacts ? 'no_contacts' : null,
+      });
     } catch (error) {
+      metroLogger.error('SOS alert dispatch failed', {
+        domain: 'SOS',
+        operation: 'fanOut',
+        error,
+      });
       captureException(error);
-      setLastOutcome({ sent: 0, failed: 0 });
+      setLastOutcome({ sent: 0, failed: 0, error: 'failed' });
     } finally {
-      methodRef.current = null;
-      permissionRef.current = null;
+      activeMethod = null;
+      activePermissionPromise = null;
+      clearActiveTimer();
       reset();
     }
   }, [reset, setLastOutcome]);
@@ -138,38 +159,38 @@ export function useSOS(): UseSOSResult {
   const tick = useCallback((): void => {
     const next = useSOSStore.getState().countdown - 1;
     if (next <= 0) {
-      clearTimer();
+      clearActiveTimer();
       setCountdown(0);
       setSending(true);
       void fanOut();
     } else {
       setCountdown(next);
     }
-  }, [clearTimer, fanOut, setCountdown, setSending]);
+  }, [fanOut, setCountdown, setSending]);
 
   const trigger = useCallback(
     (method: SOSTriggerMethod): void => {
       if (useSOSStore.getState().isActive) return;
-      methodRef.current = method;
+      activeMethod = method;
       setActive(true, method);
       trackSosTriggered(method);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      clearTimer();
-      intervalRef.current = setInterval(tick, TIMING.SECOND_MS);
+      clearActiveTimer();
+      activeInterval = setInterval(tick, TIMING.SECOND_MS);
       ensureSmsPermission();
     },
-    [clearTimer, ensureSmsPermission, setActive, tick],
+    [ensureSmsPermission, setActive, tick],
   );
 
   const cancel = useCallback((): void => {
     // Once the fan-out has started the alerts are already on their way.
     if (useSOSStore.getState().isSending) return;
-    clearTimer();
-    trackSosCancelled(methodRef.current);
-    methodRef.current = null;
+    clearActiveTimer();
+    trackSosCancelled(activeMethod);
+    activeMethod = null;
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     reset();
-  }, [clearTimer, reset]);
+  }, [reset]);
 
   const handleTap = useCallback((): void => {
     const now = Date.now();
@@ -186,19 +207,25 @@ export function useSOS(): UseSOSResult {
   // Starts the countdown even when `isActive` flipped true from outside this
   // hook instance's own `trigger` call — e.g. the suspicious-follow alert in
   // `app/_layout.tsx` activates SOS directly on the shared store. `trigger`
-  // already set `intervalRef.current` synchronously for its own callers, so
+  // already set `activeInterval` synchronously for its own callers, so
   // this only ever fills in for an external activation.
   useEffect(() => {
-    if (isActive && intervalRef.current === null) {
-      methodRef.current = triggerMethod;
+    if (isActive && activeInterval === null) {
+      activeMethod = triggerMethod;
       trackSosTriggered(triggerMethod ?? 'button');
       if (triggerMethod === 'suspicious_follow') trackSuspiciousFollowSosTriggered();
-      intervalRef.current = setInterval(tick, TIMING.SECOND_MS);
+      activeInterval = setInterval(tick, TIMING.SECOND_MS);
       ensureSmsPermission();
     }
   }, [isActive, triggerMethod, tick, ensureSmsPermission]);
 
-  useEffect(() => clearTimer, [clearTimer]);
+  useEffect(() => {
+    return (): void => {
+      if (!useSOSStore.getState().isActive) {
+        clearActiveTimer();
+      }
+    };
+  }, []);
 
   return { isActive, countdown, isSending, triggerMethod, handleTap, trigger, cancel };
 }

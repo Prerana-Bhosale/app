@@ -53,7 +53,7 @@ export function BottomSheet({
           accessibilityLabel={t('common.close')}
         />
         <ScrollView
-          className="max-h-full rounded-t-3xl bg-off-white dark:bg-charcoal"
+          className="max-h-full w-full max-w-lg self-center rounded-t-3xl bg-off-white dark:bg-charcoal"
           contentContainerClassName="px-4 pt-6"
           contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}
           keyboardShouldPersistTaps="handled"

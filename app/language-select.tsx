@@ -6,6 +6,7 @@ import { Alert, Pressable, View } from 'react-native';
 
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { SafeScreen } from '@/components/ui/SafeScreen';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Text } from '@/components/ui/Text';
 import { captureException } from '@/config/sentry';
 import { COLORS } from '@/constants/colors';
@@ -64,7 +65,7 @@ export default function LanguageSelectScreen(): React.JSX.Element {
   return (
     <ErrorBoundary>
       <SafeScreen>
-        <Text variant="h1" tKey="screens.languageSelect" className="mb-6 mt-4" />
+        <ScreenHeader titleKey="screens.languageSelect" />
 
         {LANGUAGE_OPTIONS.map((option) => {
           const isCurrent = option.code === i18n.language;

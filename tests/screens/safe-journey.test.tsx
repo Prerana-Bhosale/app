@@ -1,5 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
+import { Alert } from 'react-native';
 
 import { useAuthStore } from '@/stores/auth.store';
 import { useLocationStore } from '@/stores/location.store';
@@ -120,5 +121,53 @@ describe('SafeJourneyScreen', () => {
         'Not picked from the suggestions: your current location will be saved as the destination.',
       ),
     ).toBeTruthy();
+  });
+
+  it('marks journey arrived locally and handles backend sync error gracefully', async () => {
+    useAuthStore.setState({
+      ...authSnapshot,
+      surakshakUser: {
+        userId: 'u1',
+        name: 'Asha',
+        phone: '9000000000',
+        profilePhotoUrl: '',
+        city: 'Mumbai',
+        state: 'MH',
+        language: 'en',
+        isGuest: false,
+        createdAt: null as never,
+        updatedAt: null as never,
+      },
+    });
+    mockGetActiveJourney.mockResolvedValue({
+      id: 'j1',
+      userId: 'u1',
+      destinationName: 'Andheri Station',
+      destinationLatitude: 19.1,
+      destinationLongitude: 72.8,
+      etaMinutes: 30,
+      sharedWithUserIds: [],
+      startedAt: { toDate: () => new Date() },
+      expectedArrivalAt: { toDate: () => new Date(Date.now() + 600_000) },
+      status: 'active',
+    } as never);
+
+    const markArrivedMock = jest.requireMock(
+      '@/services/firebase/safe-journey.service',
+    ).markSafeJourneyArrived;
+    markArrivedMock.mockRejectedValueOnce(new Error('Offline network error'));
+
+    jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+      const arrivedBtn = buttons?.find((button) => button.text === "I've Arrived");
+      arrivedBtn?.onPress?.();
+    });
+
+    useLocationStore.getState().setSafeJourneyActive(true, 'j1');
+    const { findByText } = await render(<SafeJourneyScreen />);
+
+    const arrivedButton = await findByText("I've Arrived");
+    await fireEvent.press(arrivedButton);
+
+    expect(useLocationStore.getState().isSafeJourneyActive).toBe(false);
   });
 });

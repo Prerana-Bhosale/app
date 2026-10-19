@@ -135,7 +135,7 @@ export function DeviceContactPickerModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View className="flex-1 justify-end bg-near-black/40">
-        <View className="h-3/4 rounded-t-3xl bg-off-white px-4 pb-8 pt-6">
+        <View className="h-3/4 w-full max-w-lg self-center rounded-t-3xl bg-off-white px-4 pb-8 pt-6 dark:bg-charcoal">
           <Text variant="h2" tKey="emergency.importFromContacts" className="mb-1" />
           <Text variant="caption" tKey="emergency.importSelectPrompt" className="mb-3" />
 

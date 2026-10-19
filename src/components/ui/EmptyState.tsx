@@ -9,9 +9,9 @@ import { COLORS } from '@/constants/colors';
 export interface EmptyStateProps {
   icon: IconName;
   title: string;
-  subtitle?: string;
-  actionLabel?: string;
-  onAction?: () => void;
+  subtitle?: string | undefined;
+  actionLabel?: string | undefined;
+  onAction?: (() => void) | undefined;
 }
 
 export function EmptyState({

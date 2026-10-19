@@ -20,6 +20,8 @@ module.exports = {
         'error-red': '#CF1322',
         'near-black': '#0A0A0A',
         charcoal: '#1A1A1A',
+        'disabled-bg': '#E5E5E5',
+        'disabled-text': '#595959',
         'dark-border': '#2A2A2A',
         // `stone` above is a flat color, not Tailwind's default numbered
         // `stone-*` scale, so a secondary dark-mode text tone needs its own

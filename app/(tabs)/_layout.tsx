@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ColorValue } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '@/constants/colors';
 import { useTheme } from '@/hooks/useTheme';
@@ -25,6 +26,7 @@ export default function TabsLayout(): React.JSX.Element {
   const { t } = useTranslation();
   const isGuest = useAuthStore((state) => state.isGuest);
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -38,6 +40,8 @@ export default function TabsLayout(): React.JSX.Element {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.border,
           borderTopWidth: 1,
+          paddingBottom: insets.bottom,
+          height: 56 + insets.bottom,
         },
       }}
     >

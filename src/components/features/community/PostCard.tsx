@@ -70,7 +70,7 @@ export function PostCard({
         {!isGuest && !isOwn && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t('community.report')}
+            accessibilityLabel={t('community.flagPost')}
             hitSlop={DANGER_ROW_HITSLOP}
             onPress={() => onReport(post.id)}
           >
@@ -90,6 +90,7 @@ export function PostCard({
       {post.type === 'location' && locationUrl !== null && (
         <Pressable
           accessibilityRole="link"
+          accessibilityLabel={t('community.viewOnMap')}
           onPress={() => {
             void Linking.openURL(locationUrl).catch((e: unknown) => captureException(e));
           }}

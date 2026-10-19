@@ -267,7 +267,12 @@ export default function IncidentReportScreen(): React.JSX.Element {
                   <Text variant="caption" className="flex-1">
                     {`${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}
                   </Text>
-                  <Pressable onPress={fetchLocation} accessibilityRole="button">
+                  <Pressable
+                    onPress={fetchLocation}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('common.refresh')}
+                    hitSlop={ICON_SIZE.ROW}
+                  >
                     <MaterialIcons name="refresh" size={ICON_SIZE.ROW} color={COLORS.STONE} />
                   </Pressable>
                 </View>
@@ -355,6 +360,7 @@ export default function IncidentReportScreen(): React.JSX.Element {
                 <Pressable
                   onPress={() => void handleAddPhoto()}
                   accessibilityRole="button"
+                  accessibilityLabel={t('incidentReport.addPhoto')}
                   className="h-16 w-16 items-center justify-center rounded-xl border border-dashed border-stone/40"
                 >
                   <MaterialIcons name="add-a-photo" size={24} color={COLORS.STONE} />

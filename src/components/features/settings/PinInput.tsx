@@ -60,8 +60,8 @@ export function PinInput({ onComplete }: PinInputProps): React.JSX.Element {
           }}
           // `text-[20px]`, not `text-xl` — a coupled lineHeight fights
           // iOS's single-line TextInput auto-centering (see Input.tsx).
-          className={`h-14 w-12 rounded-xl border-2 text-center text-[20px] font-semibold text-ink ${
-            digit !== '' ? 'border-shakti-purple' : 'border-stone/30'
+          className={`h-14 w-12 rounded-xl border-2 text-center text-[20px] font-semibold text-ink dark:bg-charcoal dark:text-white ${
+            digit !== '' ? 'border-shakti-purple' : 'border-stone/30 dark:border-dark-border'
           }`}
           keyboardType="number-pad"
           secureTextEntry

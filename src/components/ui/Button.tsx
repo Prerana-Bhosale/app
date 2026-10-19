@@ -53,6 +53,14 @@ const VARIANT_ICON_COLORS: Record<ButtonVariant, string> = {
   ghost: COLORS.SHAKTI_PURPLE,
 };
 
+const DISABLED_VARIANT_CLASSES: Record<ButtonVariant, string> = {
+  primary: 'bg-disabled-bg dark:bg-dark-border border-2 border-transparent',
+  secondary: 'bg-disabled-bg dark:bg-dark-border border-2 border-transparent',
+  danger: 'bg-disabled-bg dark:bg-dark-border border-2 border-transparent',
+  outline: 'bg-transparent border-2 border-stone/30 dark:border-dark-border',
+  ghost: 'bg-transparent border-2 border-transparent',
+};
+
 const SIZE_CLASSES: Record<ButtonSize, string> = {
   sm: 'px-3 py-2',
   md: 'px-4 py-3',
@@ -82,19 +90,22 @@ export function Button({
   accessibilityHint,
 }: ButtonProps): React.JSX.Element {
   const isInert = disabled || loading;
+  const variantClass = disabled ? DISABLED_VARIANT_CLASSES[variant] : VARIANT_CLASSES[variant];
+  const textClass = disabled
+    ? 'text-disabled-text dark:text-dark-text-secondary'
+    : VARIANT_TEXT_CLASSES[variant];
+  const iconColor = disabled ? COLORS.DISABLED_TEXT : VARIANT_ICON_COLORS[variant];
 
   const classes = [
     'flex-row items-center justify-center rounded-xl',
-    VARIANT_CLASSES[variant],
+    variantClass,
     SIZE_CLASSES[size],
     fullWidth ? 'w-full' : 'self-start',
-    isInert ? 'opacity-50' : '',
+    loading ? 'opacity-70' : '',
     className ?? '',
   ]
     .filter(Boolean)
     .join(' ');
-
-  const iconColor = VARIANT_ICON_COLORS[variant];
 
   return (
     <Pressable
@@ -116,7 +127,7 @@ export function Button({
             <Ionicons name={leftIcon} size={ICON_SIZE[size]} color={iconColor} />
           )}
           <RNText
-            className={`font-semibold ${VARIANT_TEXT_CLASSES[variant]} ${SIZE_TEXT_CLASSES[size]} ${
+            className={`font-semibold ${textClass} ${SIZE_TEXT_CLASSES[size]} ${
               leftIcon !== undefined ? 'ml-2' : ''
             } ${rightIcon !== undefined ? 'mr-2' : ''}`}
           >

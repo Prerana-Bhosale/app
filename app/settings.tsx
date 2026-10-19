@@ -326,14 +326,23 @@ export default function SettingsScreen(): React.JSX.Element {
           <Text variant="body" tKey="settings.privacyPolicy" className="py-2 text-shakti-purple" />
         </Card>
 
-        <Card padding="md" className="mt-4">
+        <Card padding="md" className="mt-6 border border-error-red/30 bg-error-red/5">
           <Pressable
             onPress={handleDeleteAccount}
             accessibilityRole="button"
-            className="py-3"
+            accessibilityLabel={t('settings.deleteAccount')}
+            className="flex-row items-center gap-3 py-1"
             hitSlop={DANGER_ROW_HITSLOP}
           >
-            <Text variant="body" tKey="settings.deleteAccount" className="text-error-red" />
+            <MaterialIcons name="delete-forever" size={22} color={COLORS.ERROR_RED} />
+            <View className="flex-1">
+              <Text
+                variant="body"
+                tKey="settings.deleteAccount"
+                className="font-medium text-error-red"
+              />
+            </View>
+            <MaterialIcons name="chevron-right" size={20} color={COLORS.ERROR_RED} />
           </Pressable>
         </Card>
 

@@ -4,14 +4,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { InteractionManager, Pressable, TextInput, View } from 'react-native';
 
+import { Button } from '@/components/ui/Button';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { SafeScreen } from '@/components/ui/SafeScreen';
 import { Spinner } from '@/components/ui/Spinner';
 import { Text } from '@/components/ui/Text';
 import { OTP_LENGTH, OTP_RESEND_SECONDS } from '@/constants/auth';
-import { COLORS } from '@/constants/colors';
 import { ROUTES } from '@/constants/routes';
 import { ICON_SIZE, TIMING } from '@/constants/ui';
+import { useTheme } from '@/hooks/useTheme';
 import { ANALYTICS_EVENTS, trackEvent } from '@/services/analytics.service';
 import { AuthError, sendOtp, verifyOtp } from '@/services/firebase/auth.service';
 import { doesUserExist } from '@/services/firebase/user.service';
@@ -26,11 +27,13 @@ function emptyDigits(): string[] {
 export default function OtpScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
+  const { colors } = useTheme();
   const { phone } = useLocalSearchParams<{ phone: string }>();
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
   const [digits, setDigits] = useState<string[]>(emptyDigits);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(OTP_RESEND_SECONDS);
 
@@ -75,9 +78,20 @@ export default function OtpScreen(): React.JSX.Element {
       setStoredConfirmation(null);
       router.replace(isNewUser ? ROUTES.ONBOARDING : ROUTES.HOME);
     } catch (verifyError) {
-      setError(verifyError instanceof AuthError ? verifyError.i18nKey : 'errors.generic');
-      setDigits(emptyDigits());
-      inputRefs.current[0]?.focus();
+      const isAuthError = verifyError instanceof AuthError;
+      const i18nKey = isAuthError ? verifyError.i18nKey : 'errors.generic';
+      setError(i18nKey);
+
+      const isCodeInvalid =
+        isAuthError &&
+        (verifyError.code === 'auth/invalid-verification-code' ||
+          verifyError.code === 'auth/code-expired' ||
+          verifyError.i18nKey === 'auth.otpInvalid' ||
+          verifyError.i18nKey === 'auth.otpExpired');
+      if (isCodeInvalid) {
+        setDigits(emptyDigits());
+        inputRefs.current[0]?.focus();
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -121,7 +135,8 @@ export default function OtpScreen(): React.JSX.Element {
   }
 
   async function handleResend(): Promise<void> {
-    if (phone === undefined) return;
+    if (phone === undefined || isResending) return;
+    setIsResending(true);
     try {
       const confirmation = await sendOtp(phone);
       setStoredConfirmation(confirmation);
@@ -131,6 +146,8 @@ export default function OtpScreen(): React.JSX.Element {
       inputRefs.current[0]?.focus();
     } catch (resendError) {
       setError(resendError instanceof AuthError ? resendError.i18nKey : 'errors.generic');
+    } finally {
+      setIsResending(false);
     }
   }
 
@@ -148,7 +165,7 @@ export default function OtpScreen(): React.JSX.Element {
           accessibilityRole="button"
           accessibilityLabel={t('common.back')}
         >
-          <MaterialIcons name="arrow-back" size={ICON_SIZE.BACK} color={COLORS.DEEP_INK} />
+          <MaterialIcons name="arrow-back" size={ICON_SIZE.BACK} color={colors.textPrimary} />
         </Pressable>
 
         <Text variant="h2" tKey="auth.enterOtp" className="mb-2 mt-6" />
@@ -156,7 +173,7 @@ export default function OtpScreen(): React.JSX.Element {
           variant="caption"
           tKey="auth.otpSentTo"
           tOptions={{ phone: maskPhone(phone ?? '') }}
-          className="text-stone"
+          className="text-stone dark:text-dark-text-secondary"
         />
 
         <View className="mb-4 mt-8 flex-row justify-between">
@@ -168,8 +185,8 @@ export default function OtpScreen(): React.JSX.Element {
               }}
               // `text-[20px]`, not `text-xl` — a coupled lineHeight fights
               // iOS's single-line TextInput auto-centering (see Input.tsx).
-              className={`h-14 w-12 rounded-xl border-2 text-center text-[20px] font-semibold text-ink ${
-                digit !== '' ? 'border-shakti-purple' : 'border-stone/30'
+              className={`h-14 w-12 rounded-xl border-2 text-center text-[20px] font-semibold text-ink dark:bg-charcoal dark:text-white ${
+                digit !== '' ? 'border-shakti-purple' : 'border-stone/30 dark:border-dark-border'
               }`}
               editable={!isVerifying}
               keyboardType="number-pad"
@@ -190,17 +207,37 @@ export default function OtpScreen(): React.JSX.Element {
           </Text>
         ) : null}
 
+        {error !== null && digits.every((digit) => digit !== '') && !isVerifying ? (
+          <View className="mt-4">
+            <Button
+              variant="secondary"
+              size="md"
+              label={t('common.retry')}
+              onPress={() => void handleVerify(digits.join(''))}
+              fullWidth
+            />
+          </View>
+        ) : null}
+
         <View className="mt-6 items-center">
           {countdown > 0 ? (
             <Text
               variant="caption"
               tKey="auth.resendIn"
               tOptions={{ seconds: countdown }}
-              className="text-stone"
+              className="text-stone dark:text-dark-text-secondary"
             />
           ) : (
-            <Pressable onPress={() => void handleResend()} accessibilityRole="button">
-              <Text variant="label" tKey="auth.resendOtp" className="text-shakti-purple" />
+            <Pressable
+              onPress={() => void handleResend()}
+              accessibilityRole="button"
+              disabled={isResending}
+            >
+              <Text
+                variant="label"
+                tKey="auth.resendOtp"
+                className={isResending ? 'text-stone' : 'text-shakti-purple'}
+              />
             </Pressable>
           )}
         </View>

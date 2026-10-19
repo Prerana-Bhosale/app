@@ -247,3 +247,9 @@ jest.mock('@expo-google-fonts/noto-sans-devanagari', () => ({
   NotoSansDevanagari_600SemiBold: 'NotoSansDevanagari_600SemiBold',
   NotoSansDevanagari_700Bold: 'NotoSansDevanagari_700Bold',
 }));
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  useSegments: () => [],
+  router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() },
+}));

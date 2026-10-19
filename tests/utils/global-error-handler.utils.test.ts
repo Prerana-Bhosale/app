@@ -14,6 +14,9 @@ describe('installGlobalErrorHandler', () => {
 
   afterEach(() => {
     delete (globalThis as { ErrorUtils?: unknown }).ErrorUtils;
+    delete (globalThis as { addEventListener?: unknown }).addEventListener;
+    delete (globalThis as { removeEventListener?: unknown }).removeEventListener;
+    delete (globalThis as { onunhandledrejection?: unknown }).onunhandledrejection;
   });
 
   it('wraps the existing handler, calling the new one first then the original', () => {
@@ -38,7 +41,28 @@ describe('installGlobalErrorHandler', () => {
     expect(mockErrorUtils.setGlobalHandler).toHaveBeenLastCalledWith(originalHandler);
   });
 
-  it('returns undefined when ErrorUtils is unavailable', () => {
+  it('listens for unhandledrejection when addEventListener is available', () => {
+    const addEventListener = jest.fn();
+    const removeEventListener = jest.fn();
+    (globalThis as { addEventListener?: unknown }).addEventListener = addEventListener;
+    (globalThis as { removeEventListener?: unknown }).removeEventListener = removeEventListener;
+
+    const onError = jest.fn();
+    const restore = installGlobalErrorHandler(onError);
+
+    expect(addEventListener).toHaveBeenCalledWith('unhandledrejection', expect.any(Function));
+
+    const listener = addEventListener.mock.calls[0]?.[1] as (event: { reason: unknown }) => void;
+    const rejectionError = new Error('promise rejected');
+    listener({ reason: rejectionError });
+
+    expect(onError).toHaveBeenCalledWith(rejectionError);
+
+    restore?.();
+    expect(removeEventListener).toHaveBeenCalledWith('unhandledrejection', expect.any(Function));
+  });
+
+  it('returns undefined when neither ErrorUtils nor promise rejection listener is available', () => {
     delete (globalThis as { ErrorUtils?: unknown }).ErrorUtils;
     expect(installGlobalErrorHandler(jest.fn())).toBeUndefined();
   });

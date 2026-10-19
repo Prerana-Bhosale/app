@@ -25,7 +25,8 @@
     "viewAll": "View All",
     "seeMore": "See More",
     "noResultsFound": "No results found",
-    "comingSoon": "Coming Soon"
+    "comingSoon": "Coming Soon",
+    "openSettings": "Open Settings"
   },
   "nav": {
     "home": "Home",
@@ -67,6 +68,7 @@
     "sosResultSent": "Alert sent to {{count}} contact(s).",
     "sosResultPartial": "Alert sent to {{sent}} contact(s). {{failed}} could not be sent — please call them directly.",
     "sosResultNoContacts": "No alert was sent: add an emergency contact with a valid mobile number, or call 112.",
+    "sosResultFailed": "Failed to send emergency alert. Please call 112 immediately.",
     "addContactsWarning": "Add"
   },
   "auth": {
@@ -90,7 +92,7 @@
     "phoneRequired": "Phone number is required",
     "phoneInvalid": "Enter a valid 10-digit Indian mobile number",
     "otpRequired": "OTP is required",
-    "otpInvalid": "Enter the 6-digit OTP",
+    "otpInvalid": "Incorrect verification code. Please check and try again.",
     "otpExpired": "OTP expired. Please request a new one.",
     "tooManyRequests": "Too many attempts. Please wait before trying again."
   },
@@ -117,6 +119,7 @@
     "required": "Required",
     "recommended": "Recommended",
     "cannotSkipRequired": "This permission is required for Surakshak to protect you",
+    "openSettingsPrompt": "Please enable the required permissions in your device settings to continue.",
     "nameLabel": "Full Name",
     "namePlaceholder": "Your name",
     "nameInvalid": "Enter your name (2–50 characters)",
@@ -156,6 +159,7 @@
     "deleteContact": "Delete Contact",
     "deleteContactConfirm": "Remove {{name}} from emergency contacts?",
     "callNow": "Call Now",
+    "callEmergency112": "Call 112 (Emergency Helpline)",
     "callConfirm": "Call {{name}} at {{number}}?",
     "predefinedContacts": "Helpline Numbers",
     "myContacts": "My Emergency Contacts",
@@ -243,6 +247,7 @@
     "anonymous": "Post Anonymously",
     "post": "Post",
     "report": "Report Post",
+    "flagPost": "Report Post",
     "reported": "Post reported",
     "typeMessage": "Type a message...",
     "noMessages": "No posts yet",
@@ -392,6 +397,7 @@
     "descriptionInvalid": "Enter a description (10–1000 characters)",
     "photosLabel": "Add Photos (optional)",
     "photosHint": "Up to 5 photos. These will be stored securely.",
+    "addPhoto": "Add a photo",
     "submit": "Submit Report",
     "disclaimer": "Reports are timestamped, location-tagged, and stored securely. They cannot be edited after submission to preserve integrity. This information may be shared with authorities if required.",
     "submittedTitle": "✅ Report Submitted",
@@ -421,7 +427,9 @@
     "intervalShort": "{{minutes}}m",
     "contactsLabel": "Who to alert if I miss?",
     "info": "If you miss check-ins, an SMS alert will be sent to your selected contacts with your last known location.",
-    "start": "Start Check-In"
+    "start": "Start Check-In",
+    "notificationTitle": "⏰ Safe Check-In Required",
+    "notificationBody": "Tap to confirm you're safe. Missing check-ins alerts your contacts."
   },
   "ota": {
     "available": "An update is available",
@@ -475,6 +483,7 @@
     "smsFailed": "Failed to send SMS alert. Please try again.",
     "callFailed": "Could not place the call. Please try manually.",
     "contactSaveFailed": "Could not save the contact. Please try again.",
+    "contactDeleteFailed": "Could not delete the contact. Please try again.",
     "contactsLoadFailed": "Could not load your emergency contacts.",
     "deviceContactsFailed": "Could not read your phone contacts.",
     "uploadFailed": "Upload failed. Please check your connection.",

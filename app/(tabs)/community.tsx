@@ -20,6 +20,7 @@ import { COLORS } from '@/constants/colors';
 import { APP_CONFIG, COMMUNITY_IMAGE_ASPECT } from '@/constants/config';
 import { ICON_SIZE } from '@/constants/ui';
 import { useCommunity } from '@/hooks/useCommunity';
+import { useTheme } from '@/hooks/useTheme';
 import { getCurrentLocation } from '@/services/location.service';
 import { useAuthStore } from '@/stores/auth.store';
 import type {
@@ -48,6 +49,7 @@ const TYPE_LABEL_KEY: Record<PostType, string> = {
 
 export default function CommunityScreen(): React.JSX.Element {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const isGuest = useAuthStore((state) => state.isGuest);
   const surakshakUser = useAuthStore((state) => state.surakshakUser);
   const city = surakshakUser?.city ?? '';
@@ -370,10 +372,10 @@ export default function CommunityScreen(): React.JSX.Element {
             multiline
             maxLength={APP_CONFIG.COMMUNITY_POST_MAX_LENGTH}
             placeholder={t('community.typeMessage')}
-            placeholderTextColor={COLORS.STONE}
+            placeholderTextColor={colors.textSecondary}
             value={content}
             onChangeText={setContent}
-            className="mt-3 min-h-24 rounded-xl border border-stone/30 p-3 text-base text-ink"
+            className="mt-3 min-h-24 rounded-xl border border-stone/30 bg-white p-3 text-base text-ink dark:border-dark-border dark:bg-charcoal dark:text-white"
           />
           <Text variant="caption" className="mt-1 self-end">
             {t('community.charCount', {

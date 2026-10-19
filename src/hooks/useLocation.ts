@@ -32,10 +32,16 @@ export function useLocation(): UseLocationResult {
   }, [setCurrentLocation]);
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
-    const granted = await requestLocationPermission();
-    setLocationPermission(granted);
-    if (granted) startWatch();
-    return granted;
+    try {
+      const granted = await requestLocationPermission();
+      setLocationPermission(granted);
+      if (granted) startWatch();
+      return granted;
+    } catch (error) {
+      console.warn('useLocation: requestPermission failed:', error);
+      setLocationPermission(false);
+      return false;
+    }
   }, [setLocationPermission, startWatch]);
 
   useEffect(() => {

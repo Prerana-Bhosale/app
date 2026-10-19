@@ -6,6 +6,7 @@ import { Alert } from 'react-native';
 import { ROUTES } from '@/constants/routes';
 import { STORAGE_FLAG_ON, STORAGE_KEYS } from '@/constants/storage';
 import { useAuthStore } from '@/stores/auth.store';
+import { useSOSStore } from '@/stores/sos.store';
 import { useUserStore } from '@/stores/user.store';
 import HomeScreen from '@app/(tabs)/index';
 
@@ -52,6 +53,11 @@ describe('HomeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useAuthStore.getState().reset();
+    useSOSStore.getState().reset();
+  });
+
+  afterEach(() => {
+    useSOSStore.getState().reset();
   });
 
   it('renders the SOS button and the quick actions', async () => {
@@ -99,15 +105,31 @@ describe('HomeScreen', () => {
     expect(getByText('Add')).toBeTruthy();
   });
 
-  it('shows the countdown after three quick taps on the SOS button', async () => {
-    const { getByLabelText, getByText } = await render(<HomeScreen />);
+  it('triggers SOS after three quick taps on the SOS button', async () => {
+    const { getByLabelText } = await render(<HomeScreen />);
     const button = getByLabelText('SOS Emergency Button');
 
     await fireEvent.press(button);
     await fireEvent.press(button);
     await fireEvent.press(button);
 
-    expect(getByText('Sending SOS in 5s...')).toBeTruthy();
+    expect(useSOSStore.getState().isActive).toBe(true);
+  });
+
+  it('shows failure alert with 112 helpline and retry options on dispatch error', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    useSOSStore.getState().setLastOutcome({ sent: 0, failed: 0, error: 'failed' });
+
+    await render(<HomeScreen />);
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'SOS alert',
+      'Failed to send emergency alert. Please call 112 immediately.',
+      expect.arrayContaining([
+        expect.objectContaining({ text: 'Try again' }),
+        expect.objectContaining({ text: 'Call 112 (Emergency Helpline)' }),
+      ]),
+    );
   });
 
   it('locks write-requiring cards for a guest and prompts to sign in instead of navigating', async () => {

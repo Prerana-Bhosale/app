@@ -47,7 +47,7 @@ export function CategoryFilter({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      className="mb-3 h-10 flex-grow-0"
+      className="mb-3 min-h-[48px] flex-grow-0"
       contentContainerClassName="items-center gap-2"
     >
       {chips.map((category) => {
@@ -58,13 +58,17 @@ export function CategoryFilter({
             accessibilityRole="button"
             accessibilityState={{ selected: isSelected }}
             onPress={() => onSelect(category)}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
             className={
               isSelected
-                ? 'rounded-full bg-shakti-purple px-4 py-2'
-                : 'rounded-full border border-stone/20 bg-white px-4 py-2'
+                ? 'min-h-[44px] items-center justify-center rounded-full bg-shakti-purple px-4 py-2'
+                : 'min-h-[44px] items-center justify-center rounded-full border border-stone/20 bg-white px-4 py-2 dark:border-dark-border dark:bg-charcoal'
             }
           >
-            <Text variant="caption" className={isSelected ? 'text-white' : 'text-stone'}>
+            <Text
+              variant="caption"
+              className={isSelected ? 'text-white' : 'text-stone dark:text-dark-text-secondary'}
+            >
               {category === ALL_CATEGORIES ? t('info.allCategories') : category}
             </Text>
           </Pressable>

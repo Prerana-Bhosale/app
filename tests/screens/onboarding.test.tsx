@@ -3,7 +3,7 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import * as Contacts from 'expo-contacts';
 import * as Location from 'expo-location';
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, AppState, type AppStateStatus, Linking } from 'react-native';
 
 import { ROUTES } from '@/constants/routes';
 import { STORAGE_FLAG_ON, STORAGE_KEYS } from '@/constants/storage';
@@ -75,8 +75,12 @@ describe('OnboardingScreen', () => {
     });
   });
 
-  it('blocks leaving the permissions step until the required ones are granted', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  it('blocks leaving the permissions step until the required ones are granted and provides open settings action', async () => {
+    const openSettingsSpy = jest.spyOn(Linking, 'openSettings').mockResolvedValue(undefined);
+    let capturedButtons: { text?: string; onPress?: () => void }[] | undefined;
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+      capturedButtons = buttons as never;
+    });
 
     const { getByText } = await render(<OnboardingScreen />);
     await fireEvent.press(getByText('Next'));
@@ -85,9 +89,54 @@ describe('OnboardingScreen', () => {
 
     expect(alertSpy).toHaveBeenCalledWith(
       'This permission is required for Surakshak to protect you',
+      'Please enable the required permissions in your device settings to continue.',
+      expect.arrayContaining([
+        expect.objectContaining({ text: 'Cancel' }),
+        expect.objectContaining({ text: 'Open Settings' }),
+      ]),
     );
 
+    const openSettingsBtn = capturedButtons?.find((b) => b.text === 'Open Settings');
+    openSettingsBtn?.onPress?.();
+    expect(openSettingsSpy).toHaveBeenCalledTimes(1);
+
     alertSpy.mockRestore();
+    openSettingsSpy.mockRestore();
+  });
+
+  it('refreshes granted permissions when app becomes active from settings', async () => {
+    let appStateListener: ((state: AppStateStatus) => void) | undefined;
+    jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
+      appStateListener = listener;
+      return { remove: jest.fn() };
+    });
+
+    jest.mocked(Location.getForegroundPermissionsAsync).mockResolvedValue({
+      granted: true,
+      status: 'granted' as never,
+      expires: 'never',
+      canAskAgain: true,
+    });
+    jest.mocked(Contacts.getPermissionsAsync).mockResolvedValue({
+      granted: true,
+      status: 'granted' as never,
+      expires: 'never',
+      canAskAgain: true,
+    });
+
+    const { getByText } = await render(<OnboardingScreen />);
+    await fireEvent.press(getByText('Next'));
+    await waitFor(() => getByText('Allow Permissions'));
+
+    await act(async () => {
+      appStateListener?.('active');
+      await Promise.resolve();
+    });
+
+    await fireEvent.press(getByText('Next'));
+    await waitFor(() => {
+      expect(getByText('Your Profile')).toBeTruthy();
+    });
   });
 
   it('requires at least one emergency contact before completing onboarding', async () => {

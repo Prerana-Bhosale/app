@@ -1,7 +1,15 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import {
+  Alert,
+  AppState,
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  View,
+} from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -44,7 +52,7 @@ export default function NearbyHelpScreen(): React.JSX.Element {
   const [places, setPlaces] = useState<PlacesByCategory>(EMPTY_PLACES);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setRefreshing] = useState(false);
-  const [hasError, setHasError] = useState(false);
+  const [errorType, setErrorType] = useState<'location' | 'network' | null>(null);
 
   const fetchAllCategories = useCallback(async (): Promise<PlacesByCategory> => {
     const fix = await getCurrentLocation();
@@ -57,15 +65,24 @@ export default function NearbyHelpScreen(): React.JSX.Element {
     return { police, hospital, fire_station: fire, pharmacy };
   }, []);
 
+  const resolveErrorType = (error: unknown): 'location' | 'network' => {
+    const isLoc =
+      error instanceof Error &&
+      (error.message.includes('location') ||
+        error.message.includes('permission') ||
+        error.message.includes('Permission'));
+    return isLoc ? 'location' : 'network';
+  };
+
   useEffect(() => {
     void fetchAllCategories()
       .then((next) => {
         setPlaces(next);
-        setHasError(false);
+        setErrorType(null);
       })
       .catch((error: unknown) => {
         captureException(error);
-        setHasError(true);
+        setErrorType(resolveErrorType(error));
       })
       .finally(() => setIsLoading(false));
   }, [fetchAllCategories]);
@@ -75,14 +92,23 @@ export default function NearbyHelpScreen(): React.JSX.Element {
     void fetchAllCategories()
       .then((next) => {
         setPlaces(next);
-        setHasError(false);
+        setErrorType(null);
       })
       .catch((error: unknown) => {
         captureException(error);
-        setHasError(true);
+        setErrorType(resolveErrorType(error));
       })
       .finally(() => setRefreshing(false));
   }, [fetchAllCategories]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active' && errorType === 'location') {
+        onRefresh();
+      }
+    });
+    return (): void => subscription.remove();
+  }, [errorType, onRefresh]);
 
   const selectCategory = useCallback((category: HelpCategory): void => {
     setActiveCategory(category);
@@ -150,7 +176,15 @@ export default function NearbyHelpScreen(): React.JSX.Element {
 
         {isLoading ? (
           <Spinner size="lg" className="flex-1 items-center justify-center" />
-        ) : hasError ? (
+        ) : errorType === 'location' ? (
+          <EmptyState
+            icon="location-outline"
+            title={t('incidentReport.locationUnavailable')}
+            subtitle={t('errors.locationPermissionDenied')}
+            actionLabel={t('common.openSettings')}
+            onAction={() => void Linking.openSettings()}
+          />
+        ) : errorType === 'network' ? (
           <EmptyState
             icon="warning"
             title={t('location.nearbyHelpError')}

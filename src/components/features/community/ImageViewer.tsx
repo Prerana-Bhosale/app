@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '@/constants/colors';
 import { ICON_SIZE } from '@/constants/ui';
@@ -15,6 +16,7 @@ export interface ImageViewerProps {
 
 export function ImageViewer({ uri, onClose }: ImageViewerProps): React.JSX.Element | null {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   if (uri === null) return null;
 
@@ -27,7 +29,10 @@ export function ImageViewer({ uri, onClose }: ImageViewerProps): React.JSX.Eleme
         onPress={onClose}
       >
         <Image source={{ uri }} className="h-4/5 w-full" contentFit="contain" />
-        <View className="absolute right-5 top-12 rounded-full bg-white/20 p-2">
+        <View
+          className="absolute right-5 rounded-full bg-white/20 p-2"
+          style={{ top: Math.max(insets.top, 16) + 12 }}
+        >
           <MaterialIcons name="close" size={ICON_SIZE.BACK} color={COLORS.WHITE} />
         </View>
       </Pressable>

@@ -137,59 +137,61 @@ export default function CalculatorScreen(): React.JSX.Element {
 
   return (
     <ErrorBoundary>
-      <SafeAreaView className="flex-1 justify-end bg-near-black px-3 pb-8">
-        <View className="mb-6 items-end px-3">
-          <RNText
-            testID="calculator-display"
-            className="text-6xl font-light text-white"
-            numberOfLines={1}
-            adjustsFontSizeToFit
-          >
-            {state.display}
-          </RNText>
-        </View>
-
-        {KEY_ROWS.map((row, rowIndex) => (
-          <View key={`row-${rowIndex}`} className="mb-3 flex-row gap-3">
-            {row.map((key) => (
-              <Pressable
-                key={keyLabel(key)}
-                onPress={() => handleKeyPress(key)}
-                accessibilityRole="button"
-                accessibilityLabel={keyLabel(key)}
-                className={`aspect-square flex-1 items-center justify-center rounded-full ${keyClassName(key)}`}
-              >
-                <RNText className="text-2xl font-medium text-white">{keyLabel(key)}</RNText>
-              </Pressable>
-            ))}
+      <SafeAreaView className="flex-1 justify-end bg-near-black">
+        <View className="w-full max-w-sm self-center px-4 pb-8">
+          <View className="mb-6 items-end px-3">
+            <RNText
+              testID="calculator-display"
+              className="text-6xl font-light text-white"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {state.display}
+            </RNText>
           </View>
-        ))}
 
-        <View className="flex-row gap-3">
-          <Pressable
-            onPress={() => handleKeyPress({ kind: 'digit', value: '0' })}
-            accessibilityRole="button"
-            accessibilityLabel="0"
-            className="h-16 flex-[2.15] items-start justify-center rounded-full bg-charcoal pl-7"
-          >
-            <RNText className="text-2xl font-medium text-white">0</RNText>
-          </Pressable>
-          <Pressable
-            onPress={() => handleKeyPress({ kind: 'decimal' })}
-            accessibilityRole="button"
-            accessibilityLabel="."
-            className="aspect-square flex-1 items-center justify-center rounded-full bg-charcoal"
-          >
-            <RNText className="text-2xl font-medium text-white">.</RNText>
-          </Pressable>
-          <Pressable
-            onPress={() => handleKeyPress({ kind: 'equals' })}
-            accessibilityRole="button"
-            accessibilityLabel="="
-            className="aspect-square flex-1 items-center justify-center rounded-full bg-saffron"
-          >
-            <RNText className="text-2xl font-medium text-white">=</RNText>
-          </Pressable>
+          {KEY_ROWS.map((row, rowIndex) => (
+            <View key={`row-${rowIndex}`} className="mb-3 flex-row gap-3">
+              {row.map((key) => (
+                <Pressable
+                  key={keyLabel(key)}
+                  onPress={() => handleKeyPress(key)}
+                  accessibilityRole="button"
+                  accessibilityLabel={keyLabel(key)}
+                  className={`aspect-square flex-1 items-center justify-center rounded-full ${keyClassName(key)}`}
+                >
+                  <RNText className="text-2xl font-medium text-white">{keyLabel(key)}</RNText>
+                </Pressable>
+              ))}
+            </View>
+          ))}
+
+          <View className="flex-row gap-3">
+            <Pressable
+              onPress={() => handleKeyPress({ kind: 'digit', value: '0' })}
+              accessibilityRole="button"
+              accessibilityLabel="0"
+              className="flex-[2.15] self-stretch items-start justify-center rounded-full bg-charcoal pl-7"
+            >
+              <RNText className="text-2xl font-medium text-white">0</RNText>
+            </Pressable>
+            <Pressable
+              onPress={() => handleKeyPress({ kind: 'decimal' })}
+              accessibilityRole="button"
+              accessibilityLabel="."
+              className="aspect-square flex-1 items-center justify-center rounded-full bg-charcoal"
+            >
+              <RNText className="text-2xl font-medium text-white">.</RNText>
+            </Pressable>
+            <Pressable
+              onPress={() => handleKeyPress({ kind: 'equals' })}
+              accessibilityRole="button"
+              accessibilityLabel="="
+              className="aspect-square flex-1 items-center justify-center rounded-full bg-saffron"
+            >
+              <RNText className="text-2xl font-medium text-white">=</RNText>
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
     </ErrorBoundary>

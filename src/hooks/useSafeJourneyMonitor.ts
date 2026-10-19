@@ -9,6 +9,7 @@ import {
   cancelSafeJourney,
   getActiveJourneySession,
   markAlertSent,
+  markSafeJourneyArrived,
 } from '@/services/firebase/safe-journey.service';
 import { buildLocationUrl, getLocationWithTimeout } from '@/services/location.service';
 import {
@@ -21,7 +22,11 @@ import { useLocationStore } from '@/stores/location.store';
 import { useUserStore } from '@/stores/user.store';
 import type { SafeJourneySession } from '@/types/location.types';
 import { formatClockTime } from '@/utils/date.utils';
-import { getCachedEmergencyContacts } from '@/utils/offline-cache.utils';
+import {
+  clearSafeJourneyArrivedOffline,
+  getCachedEmergencyContacts,
+  isSafeJourneyArrivedOffline,
+} from '@/utils/offline-cache.utils';
 
 const WARNING_NOTIFICATION_ID = 'surakshak_journey_warning';
 const DUE_NOTIFICATION_ID = 'surakshak_journey_due';
@@ -137,9 +142,14 @@ export function useSafeJourneyMonitor(userId: string | null): void {
     clearTimer();
     try {
       const session = await getActiveJourneySession(userId);
-      if (session === null) {
+      if (session === null || (await isSafeJourneyArrivedOffline(session.id))) {
         setSafeJourneyActive(false);
         await cancelJourneyNotifications();
+        if (session !== null) {
+          markSafeJourneyArrived(session.id)
+            .then(() => clearSafeJourneyArrivedOffline(session.id))
+            .catch(() => undefined);
+        }
         return;
       }
 

@@ -1,5 +1,6 @@
-import { render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
+import { Alert } from 'react-native';
 
 import { useAuthStore } from '@/stores/auth.store';
 import { useUserStore } from '@/stores/user.store';
@@ -83,5 +84,49 @@ describe('EmergencyContactsScreen', () => {
       expect(getByText('Ma')).toBeTruthy();
     });
     expect(getByText('Mother · +919876543210')).toBeTruthy();
+  });
+
+  it('shows contactDeleteFailed alert when deletion fails', async () => {
+    useAuthStore.setState({
+      surakshakUser: {
+        userId: 'u1',
+        name: 'Priya',
+        phone: '+919999999999',
+        profilePhotoUrl: '',
+        city: 'Mumbai',
+        state: '',
+        language: 'en',
+        isGuest: false,
+        createdAt: {} as never,
+        updatedAt: {} as never,
+      },
+    });
+    mockGetEmergencyContacts.mockResolvedValue([
+      {
+        id: 'c1',
+        name: 'Ma',
+        phone: '+919876543210',
+        relationship: 'Mother',
+        isPredefined: false,
+        order: 0,
+      },
+    ] as never);
+
+    const deleteMock = jest.requireMock('@/services/firebase/user.service').deleteEmergencyContact;
+    deleteMock.mockRejectedValueOnce(new Error('Network error'));
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+      const deleteButton = buttons?.find((button) => button.text === 'Delete');
+      deleteButton?.onPress?.();
+    });
+
+    const { getByLabelText } = await render(<EmergencyContactsScreen />);
+    await waitFor(() => {
+      expect(getByLabelText('Delete Contact')).toBeTruthy();
+    });
+
+    await fireEvent.press(getByLabelText('Delete Contact'));
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith('Could not delete the contact. Please try again.');
+    });
   });
 });

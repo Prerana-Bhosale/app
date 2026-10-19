@@ -26,7 +26,7 @@ export default function NotFoundScreen(): React.JSX.Element {
           size="md"
           label={t('screens.goHome')}
           onPress={handleGoHome}
-          className="mt-6"
+          className="mt-6 self-center"
         />
       </SafeScreen>
     </ErrorBoundary>

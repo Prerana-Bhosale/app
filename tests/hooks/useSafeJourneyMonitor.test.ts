@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, renderHook } from '@testing-library/react-native';
 
 import { APP_CONFIG } from '@/constants/config';
@@ -12,6 +13,7 @@ jest.mock('@/services/firebase/safe-journey.service', () => ({
   getActiveJourneySession: jest.fn(() => Promise.resolve(null)),
   markAlertSent: jest.fn(() => Promise.resolve()),
   cancelSafeJourney: jest.fn(() => Promise.resolve()),
+  markSafeJourneyArrived: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('@/services/notification.service', () => ({
@@ -149,5 +151,19 @@ describe('useSafeJourneyMonitor', () => {
 
     expect(journeyService.getActiveJourneySession).toHaveBeenCalledTimes(2);
     expect(notificationService.cancelLocalNotification).toHaveBeenCalled();
+  });
+
+  it('does not alert if the session was marked arrived offline', async () => {
+    const deadline = new Date(Date.now() - 1000);
+    jest
+      .mocked(journeyService.getActiveJourneySession)
+      .mockResolvedValue(session(deadline) as never);
+    jest.mocked(AsyncStorage.getItem).mockResolvedValue(JSON.stringify(['j1']));
+
+    await renderHook(() => useSafeJourneyMonitor('u1'));
+    await flush();
+
+    expect(smsService.sendSafeJourneyAlert).not.toHaveBeenCalled();
+    expect(useLocationStore.getState().isSafeJourneyActive).toBe(false);
   });
 });

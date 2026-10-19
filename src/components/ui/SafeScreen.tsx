@@ -1,11 +1,18 @@
 import React from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  type RefreshControlProps,
+  ScrollView,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export interface SafeScreenProps {
   children: React.ReactNode;
   scrollable?: boolean;
   className?: string;
+  refreshControl?: React.ReactElement<RefreshControlProps>;
 }
 
 // iOS never resizes the window for the keyboard on its own — without this,
@@ -20,6 +27,7 @@ export function SafeScreen({
   children,
   scrollable = false,
   className,
+  refreshControl,
 }: SafeScreenProps): React.JSX.Element {
   const body = className === undefined ? 'flex-1 px-4' : `flex-1 px-4 ${className}`;
 
@@ -34,6 +42,7 @@ export function SafeScreen({
             className={body}
             contentContainerClassName="pb-8"
             keyboardShouldPersistTaps="handled"
+            refreshControl={refreshControl}
           >
             {children}
           </ScrollView>

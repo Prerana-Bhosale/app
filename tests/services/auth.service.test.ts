@@ -56,6 +56,8 @@ describe('mapFirebaseAuthError', () => {
     ['auth/too-many-requests', 'auth.tooManyRequests'],
     ['auth/invalid-verification-code', 'auth.otpInvalid'],
     ['auth/code-expired', 'auth.otpExpired'],
+    ['auth/user-disabled', 'errors.sessionExpired'],
+    ['auth/network-request-failed', 'errors.networkError'],
     ['auth/some-unknown-code', 'errors.generic'],
   ])('%s maps to i18n key %s', (code, expected) => {
     const error = mapFirebaseAuthError(code);
