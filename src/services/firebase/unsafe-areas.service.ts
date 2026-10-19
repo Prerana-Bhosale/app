@@ -55,6 +55,7 @@ export async function reportUnsafeArea(
       voterIds: [],
       createdAt: serverTimestamp(),
     });
+
     return created.id;
   } catch (error) {
     console.error('reportUnsafeArea failed:', error);
@@ -63,26 +64,25 @@ export async function reportUnsafeArea(
 }
 
 /**
- * Subscribes to every unsafe area, newest first. Returns the unsubscribe
- * function.
+ * Subscribes to unsafe areas, newest first, and returns the unsubscribe
+ * function. Only approved areas are exposed to the public map.
  *
- * Guests are never signed in to Firebase Auth (`isGuest` is a local-only
- * flag), so this listener runs unauthenticated for them. If Firestore rules
- * reject that read, `onSnapshot` reports it through the error callback rather
- * than throwing — without one, that error is unhandled and crashes the app.
- * Degrade to an empty list instead of taking the screen down.
+ * If Firestore rejects the read, degrade to an empty list rather than
+ * allowing an unhandled listener error to crash the screen.
  * @phase Phase 4 — Location & Maps
  */
 export function subscribeToUnsafeAreas(onUpdate: (areas: UnsafeArea[]) => void): () => void {
   return onSnapshot(
     query(areasCollection(), orderBy('createdAt', 'desc')),
     (snapshot) => {
-      onUpdate(
-        snapshot.docs.map((document) => ({
+      const areas = snapshot.docs
+        .map((document) => ({
           id: document.id,
           ...(document.data() as Omit<UnsafeArea, 'id'>),
-        })),
-      );
+        }))
+        .filter((area) => area.status === 'approved');
+
+      onUpdate(areas);
     },
     (error) => {
       console.error('subscribeToUnsafeAreas failed:', error);
@@ -104,8 +104,14 @@ export async function voteOnUnsafeArea(
   try {
     const snapshot = await getDoc(areaDoc(areaId));
     const data = snapshot.data() as Omit<UnsafeArea, 'id'> | undefined;
-    if (data === undefined) throw new Error('Area not found');
-    if (data.voterIds.includes(userId)) return;
+
+    if (data === undefined) {
+      throw new Error('Area not found');
+    }
+
+    if (data.voterIds.includes(userId)) {
+      return;
+    }
 
     await updateDoc(areaDoc(areaId), {
       [vote === 'up' ? 'upvotes' : 'downvotes']: increment(1),

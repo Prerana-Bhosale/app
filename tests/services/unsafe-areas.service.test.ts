@@ -38,6 +38,7 @@ describe('unsafe-areas.service', () => {
     jest.clearAllMocks();
     errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
+
   afterEach(() => errorSpy.mockRestore());
 
   it('reportUnsafeArea writes a pending, orange-pinned report', async () => {
@@ -51,7 +52,9 @@ describe('unsafe-areas.service', () => {
     );
 
     expect(id).toBe('area-1');
+
     const payload = jest.mocked(addDoc).mock.calls[0]?.[1] as Record<string, unknown>;
+
     expect(payload).toMatchObject({
       reportedBy: 'user-1',
       status: 'pending',
@@ -63,13 +66,55 @@ describe('unsafe-areas.service', () => {
     });
   });
 
-  it('subscribeToUnsafeAreas maps snapshot docs and returns an unsubscribe', () => {
+  it('subscribeToUnsafeAreas returns only approved areas', () => {
+    jest.mocked(onSnapshot).mockImplementationOnce(((
+      _ref: unknown,
+      cb: (snap: unknown) => void,
+    ) => {
+      cb({
+        docs: [
+          {
+            id: 'area-approved',
+            data: () => ({
+              title: 'Approved area',
+              pinColor: 'red',
+              status: 'approved',
+            }),
+          },
+          {
+            id: 'area-pending',
+            data: () => ({
+              title: 'Pending area',
+              pinColor: 'orange',
+              status: 'pending',
+            }),
+          },
+          {
+            id: 'area-rejected',
+            data: () => ({
+              title: 'Rejected area',
+              pinColor: 'orange',
+              status: 'rejected',
+            }),
+          },
+        ],
+      });
+
+      return jest.fn();
+    }) as never);
+
     const onUpdate = jest.fn();
     const unsubscribe = subscribeToUnsafeAreas(onUpdate);
 
     expect(typeof unsubscribe).toBe('function');
+
     expect(onUpdate).toHaveBeenCalledWith([
-      { id: 'area-9', title: 'Dark lane', pinColor: 'orange' },
+      {
+        id: 'area-approved',
+        title: 'Approved area',
+        pinColor: 'red',
+        status: 'approved',
+      },
     ]);
   });
 
@@ -101,6 +146,7 @@ describe('unsafe-areas.service', () => {
 
     expect(increment).toHaveBeenCalledWith(1);
     expect(arrayUnion).toHaveBeenCalledWith('user-1');
+
     expect(updateDoc).toHaveBeenCalledWith(expect.anything(), {
       upvotes: { __increment: 1 },
       voterIds: { __arrayUnion: 'user-1' },
@@ -115,22 +161,29 @@ describe('unsafe-areas.service', () => {
     } as never);
 
     await voteOnUnsafeArea('area-1', 'user-1', 'down');
+
     expect(updateDoc).not.toHaveBeenCalled();
   });
 
   it('voteOnUnsafeArea rejects when the area does not exist', async () => {
-    jest
-      .mocked(getDoc)
-      .mockResolvedValueOnce({ exists: () => false, id: 'x', data: () => undefined } as never);
+    jest.mocked(getDoc).mockResolvedValueOnce({
+      exists: () => false,
+      id: 'x',
+      data: () => undefined,
+    } as never);
+
     await expect(voteOnUnsafeArea('missing', 'user-1', 'up')).rejects.toThrow('Area not found');
+
     expect(errorSpy).toHaveBeenCalled();
   });
 
   it('reportUnsafeArea logs and rethrows when the write fails', async () => {
     jest.mocked(addDoc).mockRejectedValueOnce(new Error('offline'));
+
     await expect(reportUnsafeArea('u', 0, 0, 'title', 'description text', 'other')).rejects.toThrow(
       'offline',
     );
+
     expect(errorSpy).toHaveBeenCalled();
   });
 });
