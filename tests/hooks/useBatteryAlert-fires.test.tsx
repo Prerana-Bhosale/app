@@ -6,7 +6,14 @@ import { useUserStore } from '@/stores/user.store';
 
 jest.mock('expo-battery', () => ({
   getBatteryLevelAsync: jest.fn(() => Promise.resolve(0.15)),
+  getBatteryStateAsync: jest.fn(() => Promise.resolve(1)),
   addBatteryLevelListener: jest.fn(() => ({ remove: jest.fn() })),
+  BatteryState: {
+    UNKNOWN: 0,
+    UNPLUGGED: 1,
+    CHARGING: 2,
+    FULL: 3,
+  },
 }));
 
 const mockSendLowBatteryAlert = jest.fn((..._args: unknown[]) =>

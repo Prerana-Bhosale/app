@@ -7,7 +7,14 @@ import { useUserStore } from '@/stores/user.store';
 
 jest.mock('expo-battery', () => ({
   getBatteryLevelAsync: jest.fn(() => Promise.resolve(1)),
+  getBatteryStateAsync: jest.fn(() => Promise.resolve(1)),
   addBatteryLevelListener: jest.fn(() => ({ remove: jest.fn() })),
+  BatteryState: {
+    UNKNOWN: 0,
+    UNPLUGGED: 1,
+    CHARGING: 2,
+    FULL: 3,
+  },
 }));
 
 const mockSendLowBatteryAlert = jest.fn((..._args: unknown[]) =>
@@ -41,6 +48,7 @@ describe('useBatteryAlert — guards', () => {
     useUserStore.setState({ emergencyContacts: [CONTACT] });
     jest.mocked(AsyncStorage.getItem).mockResolvedValue(null);
     jest.mocked(Battery.getBatteryLevelAsync).mockResolvedValue(1);
+    jest.mocked(Battery.getBatteryStateAsync).mockResolvedValue(Battery.BatteryState.UNPLUGGED);
   });
 
   it('does not fire when the low-battery flag is turned off', async () => {
@@ -57,6 +65,17 @@ describe('useBatteryAlert — guards', () => {
 
   it('does not fire while the battery is above the threshold', async () => {
     jest.mocked(Battery.getBatteryLevelAsync).mockResolvedValue(0.8);
+
+    await renderHook(() => useBatteryAlert());
+    await flush();
+    await flush();
+
+    expect(mockSendLowBatteryAlert).not.toHaveBeenCalled();
+  });
+
+  it('does not fire while the battery is charging', async () => {
+    jest.mocked(Battery.getBatteryLevelAsync).mockResolvedValue(0.05);
+    jest.mocked(Battery.getBatteryStateAsync).mockResolvedValue(Battery.BatteryState.CHARGING);
 
     await renderHook(() => useBatteryAlert());
     await flush();

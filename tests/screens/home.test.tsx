@@ -41,7 +41,14 @@ jest.mock('expo-sensors', () => ({
 
 jest.mock('expo-battery', () => ({
   getBatteryLevelAsync: jest.fn(() => Promise.resolve(1)),
+  getBatteryStateAsync: jest.fn(() => Promise.resolve(1)),
   addBatteryLevelListener: jest.fn(() => ({ remove: jest.fn() })),
+  BatteryState: {
+    UNKNOWN: 0,
+    UNPLUGGED: 1,
+    CHARGING: 2,
+    FULL: 3,
+  },
 }));
 
 jest.mock('expo-sms', () => ({
