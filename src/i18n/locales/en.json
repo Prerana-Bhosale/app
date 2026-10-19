@@ -351,7 +351,10 @@
     "journeyWarningTitle": "Safe Journey: 5 minutes left",
     "journeyWarningBody": "Check in or extend your time, or your contacts will be alerted.",
     "journeyDueTitle": "Safe Journey: are you safe?",
-    "journeyDueBody": "Your expected arrival time has passed, so your contacts are being alerted. Open Surakshak if you need to update them."
+    "journeyDueBody": "Your expected arrival time has passed, so your contacts are being alerted. Open Surakshak if you need to update them.",
+    "journeyOverdue": "Journey Overdue",
+    "journeyOverdueWarning": "Your arrival deadline has passed. An alert was sent to your emergency contacts.",
+    "destinationPickRequired": "Please select a valid place from the suggestions list."
   },
   "silentRecording": {
     "title": "Silent Evidence Recording",

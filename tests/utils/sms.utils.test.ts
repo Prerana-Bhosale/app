@@ -4,6 +4,7 @@ import {
   buildLowBatteryMessage,
   buildSafeJourneyMessage,
   buildSafeJourneyStartMessage,
+  buildSafeJourneyEtaExtendedMessage,
   buildSOSMessage,
 } from '@/utils/sms.utils';
 
@@ -91,6 +92,15 @@ describe('buildSafeJourneyStartMessage', () => {
   });
 });
 
+describe('buildSafeJourneyEtaExtendedMessage', () => {
+  it.each(LANGUAGES)('notifies contacts of the new expected arrival time (%s)', (language) => {
+    const message = buildSafeJourneyEtaExtendedMessage('Priya', 'Andheri', '7:00 PM', language);
+    expect(message).toContain('Priya');
+    expect(message).toContain('Andheri');
+    expect(message).toContain('7:00 PM');
+  });
+});
+
 describe('buildLiveLocationMessage', () => {
   it.each(LANGUAGES)('shares the link and end time without an SOS (%s)', (language) => {
     const message = buildLiveLocationMessage('Priya', LOCATION_URL, '9:00 PM', language);
@@ -107,6 +117,7 @@ describe('templates', () => {
       buildLowBatteryMessage('Priya', LOCATION_URL, language),
       buildSafeJourneyMessage('Priya', 'Andheri', '6:30 PM', LOCATION_URL, language),
       buildSafeJourneyStartMessage('Priya', 'Andheri', '6:30 PM', LOCATION_URL, language),
+      buildSafeJourneyEtaExtendedMessage('Priya', 'Andheri', '7:00 PM', language),
       buildLiveLocationMessage('Priya', LOCATION_URL, '9:00 PM', language),
     ];
     for (const message of messages) {

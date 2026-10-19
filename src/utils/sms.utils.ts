@@ -36,6 +36,12 @@ interface SafeJourneyStartTemplateInput {
   locationUrl: string;
 }
 
+interface SafeJourneyEtaExtendedTemplateInput {
+  name: string;
+  destination: string;
+  newEtaTime: string;
+}
+
 interface LiveLocationTemplateInput {
   name: string;
   locationUrl: string;
@@ -127,6 +133,24 @@ const SAFE_JOURNEY_START_TEMPLATES: Record<
     `— सुरक्षक`,
 };
 
+const SAFE_JOURNEY_ETA_EXTENDED_TEMPLATES: Record<
+  Language,
+  (input: SafeJourneyEtaExtendedTemplateInput) => string
+> = {
+  en: ({ name, destination, newEtaTime }) =>
+    `${name} has extended her expected arrival time for the journey to ${destination}.\n` +
+    `New expected arrival: ${newEtaTime}.\n` +
+    `— Surakshak`,
+  hi: ({ name, destination, newEtaTime }) =>
+    `${name} ने ${destination} की यात्रा के लिए अपने पहुँचने का समय बढ़ाया है।\n` +
+    `नया अनुमानित समय: ${newEtaTime}।\n` +
+    `— सुरक्षक`,
+  mr: ({ name, destination, newEtaTime }) =>
+    `${name} ने ${destination} च्या प्रवासासाठी पोहोचण्याची वेळ वाढवली आहे.\n` +
+    `नवीन पोहोचण्याची वेळ: ${newEtaTime}.\n` +
+    `— सुरक्षक`,
+};
+
 // Routine sharing, not an emergency (BUG-026).
 const LIVE_LOCATION_TEMPLATES: Record<Language, (input: LiveLocationTemplateInput) => string> = {
   en: ({ name, locationUrl, untilTime }) =>
@@ -198,6 +222,15 @@ export function buildSafeJourneyStartMessage(
   language: Language,
 ): string {
   return SAFE_JOURNEY_START_TEMPLATES[language]({ name, destination, etaTime, locationUrl });
+}
+
+export function buildSafeJourneyEtaExtendedMessage(
+  name: string,
+  destination: string,
+  newEtaTime: string,
+  language: Language,
+): string {
+  return SAFE_JOURNEY_ETA_EXTENDED_TEMPLATES[language]({ name, destination, newEtaTime });
 }
 
 export function buildLiveLocationMessage(

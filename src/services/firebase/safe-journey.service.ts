@@ -78,6 +78,7 @@ export async function checkInSafeJourney(sessionId: string): Promise<void> {
       ),
     );
     await updateDoc(sessionDoc(sessionId), {
+      status: 'active',
       expectedArrivalAt: Timestamp.fromDate(nextArrival),
     });
   } catch (error) {
@@ -99,10 +100,11 @@ export async function extendSafeJourneyEta(
     const data = snapshot.data() as Omit<SafeJourneySession, 'id'> | undefined;
     if (data === undefined) throw new Error('Session not found');
 
-    const nextArrival = new Date(
-      data.expectedArrivalAt.toDate().getTime() + additionalMinutes * MS_PER_MINUTE,
-    );
+    const currentMs = data.expectedArrivalAt.toDate().getTime();
+    const baseMs = Math.max(Date.now(), currentMs);
+    const nextArrival = new Date(baseMs + additionalMinutes * MS_PER_MINUTE);
     await updateDoc(sessionDoc(sessionId), {
+      status: 'active',
       expectedArrivalAt: Timestamp.fromDate(nextArrival),
     });
   } catch (error) {

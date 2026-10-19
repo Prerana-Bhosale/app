@@ -14,6 +14,7 @@ import {
   buildLowBatteryMessage,
   buildSafeJourneyMessage,
   buildSafeJourneyStartMessage,
+  buildSafeJourneyEtaExtendedMessage,
   buildSOSMessage,
 } from '@/utils/sms.utils';
 
@@ -145,6 +146,20 @@ export async function sendSafeJourneyStart(
   return dispatch(
     resolveRecipients(contacts),
     buildSafeJourneyStartMessage(userName, destination, etaTime, locationUrl, language),
+  );
+}
+
+/** Notifies chosen contacts when the user extends her journey's expected arrival time. */
+export async function sendSafeJourneyEtaExtended(
+  contacts: EmergencyContact[],
+  destination: string,
+  newEtaTime: string,
+  userName: string,
+  language: Language,
+): Promise<SMSAlertResult> {
+  return dispatch(
+    resolveRecipients(contacts),
+    buildSafeJourneyEtaExtendedMessage(userName, destination, newEtaTime, language),
   );
 }
 

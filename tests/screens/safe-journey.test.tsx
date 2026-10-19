@@ -30,6 +30,15 @@ jest.mock('@/services/firebase/safe-journey.service', () => ({
   cancelSafeJourney: jest.fn(() => Promise.resolve()),
 }));
 
+const mockSendSafeJourneyEtaExtended = jest.fn(() =>
+  Promise.resolve({ sent: ['+919000000000'], failed: [] }),
+);
+jest.mock('@/services/sms.service', () => ({
+  sendSafeJourneyStart: jest.fn(() => Promise.resolve({ sent: ['+919000000000'], failed: [] })),
+  sendSafeJourneyEtaExtended: mockSendSafeJourneyEtaExtended,
+  recordSMSAlert: jest.fn(() => Promise.resolve()),
+}));
+
 const authSnapshot = useAuthStore.getState();
 
 describe('SafeJourneyScreen', () => {
@@ -87,7 +96,7 @@ describe('SafeJourneyScreen', () => {
     expect(await findByText('Cancel Journey')).toBeTruthy();
   });
 
-  it('hands an already-overdue journey to the monitor instead of showing it', async () => {
+  it('displays overdue status for an already-overdue journey and bumps monitor revision', async () => {
     useAuthStore.setState({
       ...authSnapshot,
       surakshakUser: { userId: 'u1', name: 'Asha', language: 'en' } as never,
@@ -106,10 +115,16 @@ describe('SafeJourneyScreen', () => {
     } as never);
     const revisionBefore = useLocationStore.getState().safeJourneyRevision;
 
-    const { findByText, queryByText } = await render(<SafeJourneyScreen />);
+    const { findAllByText, findByText } = await render(<SafeJourneyScreen />);
 
-    expect(await findByText('Start Journey')).toBeTruthy();
-    expect(queryByText('Andheri Station')).toBeNull();
+    expect(await findByText('Andheri Station')).toBeTruthy();
+    expect(
+      await findByText(
+        'Your arrival deadline has passed. An alert was sent to your emergency contacts.',
+      ),
+    ).toBeTruthy();
+    const overdueBadges = await findAllByText('Journey Overdue');
+    expect(overdueBadges.length).toBeGreaterThan(0);
     expect(useLocationStore.getState().safeJourneyRevision).toBeGreaterThan(revisionBefore);
   });
 
@@ -169,5 +184,45 @@ describe('SafeJourneyScreen', () => {
     await fireEvent.press(arrivedButton);
 
     expect(useLocationStore.getState().isSafeJourneyActive).toBe(false);
+  });
+
+  it('dispatches extension SMS when extending journey duration', async () => {
+    useAuthStore.setState({
+      ...authSnapshot,
+      surakshakUser: {
+        userId: 'u1',
+        name: 'Asha',
+        phone: '9000000000',
+        profilePhotoUrl: '',
+        city: 'Mumbai',
+        state: 'MH',
+        language: 'en',
+        isGuest: false,
+        createdAt: null as never,
+        updatedAt: null as never,
+      },
+    });
+    useLocationStore.getState().setSafeJourneyActive(true, 'j1');
+    mockGetActiveJourney.mockResolvedValue({
+      id: 'j1',
+      userId: 'u1',
+      destinationName: 'Andheri Station',
+      destinationLatitude: 19.1,
+      destinationLongitude: 72.8,
+      etaMinutes: 30,
+      sharedWithUserIds: ['c1'],
+      startedAt: { toDate: () => new Date() },
+      expectedArrivalAt: { toDate: () => new Date(Date.now() + 600_000) },
+      status: 'active',
+    } as never);
+
+    const { findByText } = await render(<SafeJourneyScreen />);
+    const plus15Button = await findByText('+15 min');
+    await fireEvent.press(plus15Button);
+
+    const extendMock = jest.requireMock(
+      '@/services/firebase/safe-journey.service',
+    ).extendSafeJourneyEta;
+    expect(extendMock).toHaveBeenCalledWith('j1', 15);
   });
 });
