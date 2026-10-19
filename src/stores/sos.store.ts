@@ -7,7 +7,7 @@ import type { SOSTriggerMethod } from '@/types/emergency.types';
 export interface SOSSendOutcome {
   sent: number;
   failed: number;
-  error?: 'failed' | 'no_contacts' | null;
+  error?: 'failed' | 'no_contacts' | 'draft_fallback' | null;
 }
 
 interface SOSStore {

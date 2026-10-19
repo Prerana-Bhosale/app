@@ -1,8 +1,15 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SMS from 'expo-sms';
 import { Platform } from 'react-native';
 import { checkSmsPermission, sendSmsToContacts } from 'surakshak-native';
 
-import { sendLowBatteryAlert, sendSOSAlert } from '@/services/sms.service';
+import {
+  clearPendingOutbox,
+  flushPendingOutbox,
+  getPendingOutbox,
+  sendLowBatteryAlert,
+  sendSOSAlert,
+} from '@/services/sms.service';
 import type { EmergencyContact } from '@/types/user.types';
 
 jest.mock('expo-sms', () => ({
@@ -25,14 +32,34 @@ const contact = (overrides: Partial<EmergencyContact> = {}): EmergencyContact =>
 
 describe('sms.service', () => {
   const originalOS = Platform.OS;
-  afterEach(() => {
+  let storage = new Map<string, string>();
+
+  beforeEach(() => {
+    storage = new Map<string, string>();
+    jest
+      .mocked(AsyncStorage.getItem)
+      .mockImplementation((key: string) => Promise.resolve(storage.get(key) ?? null));
+    jest.mocked(AsyncStorage.setItem).mockImplementation((key: string, value: string) => {
+      storage.set(key, value);
+      return Promise.resolve();
+    });
+    jest.mocked(AsyncStorage.removeItem).mockImplementation((key: string) => {
+      storage.delete(key);
+      return Promise.resolve();
+    });
+    jest.mocked(checkSmsPermission).mockResolvedValue(true);
+  });
+
+  afterEach(async () => {
     Platform.OS = originalOS;
+    await clearPendingOutbox();
     jest.clearAllMocks();
   });
 
   describe('on Android', () => {
     beforeEach(() => {
       Platform.OS = 'android';
+      jest.mocked(checkSmsPermission).mockResolvedValue(true);
     });
 
     it('sendSOSAlert calls sendSmsToContacts with recipient numbers and the SOS message', async () => {
@@ -49,7 +76,7 @@ describe('sms.service', () => {
       expect(result).toEqual({ sent: ['+919876543210'], failed: [] });
     });
 
-    it('falls back to the compose sheet when SEND_SMS has not been granted', async () => {
+    it('falls back to the compose sheet when SEND_SMS has not been granted and enqueues to outbox', async () => {
       jest.mocked(checkSmsPermission).mockResolvedValueOnce(false);
 
       const result = await sendSOSAlert([contact()], 'https://maps.example/1', 'Asha', 'en');
@@ -59,7 +86,31 @@ describe('sms.service', () => {
         ['+919876543210'],
         expect.stringContaining('Asha'),
       );
-      expect(result).toEqual({ sent: ['+919876543210'], failed: [] });
+      expect(result).toEqual({ sent: [], failed: ['+919876543210'], isDraftFallback: true });
+
+      const pending = await getPendingOutbox();
+      expect(pending.length).toBe(1);
+      expect(pending[0]?.recipients).toEqual(['+919876543210']);
+    });
+
+    it('drains queued outbox messages once permission is granted', async () => {
+      jest.mocked(checkSmsPermission).mockResolvedValueOnce(false);
+      await sendSOSAlert([contact()], 'https://maps.example/1', 'Asha', 'en');
+
+      jest.mocked(checkSmsPermission).mockResolvedValueOnce(true);
+      mockedSendSmsToContacts.mockResolvedValueOnce([
+        { success: true, phone: '+919876543210', method: 'direct' },
+      ]);
+
+      const flushed = await flushPendingOutbox();
+      expect(flushed.dispatched).toBe(1);
+      expect(mockedSendSmsToContacts).toHaveBeenCalledWith(
+        ['+919876543210'],
+        expect.stringContaining('Asha'),
+      );
+
+      const remaining = await getPendingOutbox();
+      expect(remaining.length).toBe(0);
     });
 
     it('falls back to the compose sheet when the permission lookup throws', async () => {

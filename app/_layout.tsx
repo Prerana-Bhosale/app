@@ -11,7 +11,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, LogBox } from 'react-native';
+import { Alert, AppState, LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -33,6 +33,7 @@ import { identifyUser } from '@/services/analytics.service';
 import { subscribeToAuthChanges } from '@/services/firebase/auth.service';
 import { getEmergencyContacts, getUserProfile } from '@/services/firebase/user.service';
 import { registerForPushNotifications } from '@/services/notification.service';
+import { flushPendingOutbox } from '@/services/sms.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { useDisguiseStore } from '@/stores/disguise.store';
 import { useSOSStore } from '@/stores/sos.store';
@@ -92,6 +93,17 @@ function RootLayout(): React.JSX.Element {
   // Reports otherwise-unhandled JS errors (thrown outside any try/catch this
   // app owns) to Sentry before falling through to RN's own default handler.
   useEffect(() => installGlobalErrorHandler(captureException), []);
+
+  // Resilient outbox: when app foregrounds or user returns from settings,
+  // check if SEND_SMS permission was granted and flush queued emergency alerts.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        void flushPendingOutbox();
+      }
+    });
+    return (): void => sub.remove();
+  }, []);
 
   // Firebase auth is reached through the service layer — absolute rule 13
   // forbids a screen (this file included) from touching Firebase directly.

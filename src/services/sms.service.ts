@@ -63,6 +63,94 @@ async function canSendSilently(): Promise<boolean> {
   }
 }
 
+export interface PendingOutboxItem {
+  id: string;
+  recipients: string[];
+  message: string;
+  createdAt: number;
+}
+
+const OUTBOX_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+export async function getPendingOutbox(): Promise<PendingOutboxItem[]> {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEYS.EMERGENCY_OUTBOX);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const cutoff = Date.now() - OUTBOX_TTL_MS;
+    return parsed
+      .filter((item): item is PendingOutboxItem => {
+        return (
+          typeof item === 'object' &&
+          item !== null &&
+          typeof (item as PendingOutboxItem).id === 'string' &&
+          Array.isArray((item as PendingOutboxItem).recipients) &&
+          typeof (item as PendingOutboxItem).message === 'string' &&
+          typeof (item as PendingOutboxItem).createdAt === 'number'
+        );
+      })
+      .filter((item) => item.createdAt >= cutoff);
+  } catch (error) {
+    console.warn('sms: could not read emergency outbox:', error);
+    return [];
+  }
+}
+
+export async function enqueuePendingOutbox(recipients: string[], message: string): Promise<void> {
+  try {
+    const existing = await getPendingOutbox();
+    const newItem: PendingOutboxItem = {
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      recipients,
+      message,
+      createdAt: Date.now(),
+    };
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.EMERGENCY_OUTBOX,
+      JSON.stringify([newItem, ...existing].slice(0, 5)),
+    );
+  } catch (error) {
+    console.warn('sms: could not enqueue to emergency outbox:', error);
+  }
+}
+
+export async function clearPendingOutbox(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEYS.EMERGENCY_OUTBOX);
+  } catch (error) {
+    console.warn('sms: could not clear emergency outbox:', error);
+  }
+}
+
+/**
+ * Checks if silent SMS permissions are now granted and drains any fresh (<10 min old)
+ * queued outbox alerts, sending them silently in the background.
+ */
+export async function flushPendingOutbox(): Promise<{ dispatched: number }> {
+  if (!(await canSendSilently())) {
+    return { dispatched: 0 };
+  }
+
+  const items = await getPendingOutbox();
+  if (items.length === 0) {
+    return { dispatched: 0 };
+  }
+
+  let count = 0;
+  for (const item of items) {
+    try {
+      await sendSmsToContacts(item.recipients, item.message);
+      count += item.recipients.length;
+    } catch (error) {
+      console.warn('sms: failed to flush outbox item:', error);
+    }
+  }
+
+  await clearPendingOutbox();
+  return { dispatched: count };
+}
+
 async function dispatch(recipients: string[], message: string): Promise<SMSAlertResult> {
   if (recipients.length === 0) return { sent: [], failed: [] };
 
@@ -90,9 +178,19 @@ async function dispatch(recipients: string[], message: string): Promise<SMSAlert
     if (!available) return { sent: [], failed: recipients };
 
     const { result } = await SMS.sendSMSAsync(recipients, message);
-    return result === 'cancelled'
-      ? { sent: [], failed: recipients }
-      : { sent: recipients, failed: [] };
+    if (result === 'cancelled') {
+      return { sent: [], failed: recipients };
+    }
+
+    // On Android, falling back to compose sheet means it is pre-filled as an unsent draft in the external SMS app.
+    // Enqueue to persistent outbox so it can auto-send once permission is granted, and report draft fallback.
+    if (Platform.OS === 'android') {
+      await enqueuePendingOutbox(recipients, message);
+      return { sent: [], failed: recipients, isDraftFallback: true };
+    }
+
+    // On iOS, compose sheet with user tap confirmation is the native platform send method.
+    return { sent: recipients, failed: [] };
   } catch (error) {
     console.error('sms dispatch failed:', error);
     return { sent: [], failed: recipients };

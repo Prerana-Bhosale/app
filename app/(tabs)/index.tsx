@@ -103,7 +103,16 @@ export default function HomeScreen(): React.JSX.Element {
     if (sosOutcome === null) return;
     const { sent, failed, error } = sosOutcome;
 
-    if (error === 'failed' || (sent === 0 && failed > 0)) {
+    if (error === 'draft_fallback') {
+      Alert.alert(t('home.sosResultTitle'), t('home.sosResultDraft'), [
+        { text: t('common.ok'), style: 'default' },
+        {
+          text: t('emergency.callEmergency112'),
+          style: 'destructive',
+          onPress: (): void => callHelpline('112'),
+        },
+      ]);
+    } else if (error === 'failed' || (sent === 0 && failed > 0)) {
       Alert.alert(t('home.sosResultTitle'), t('home.sosResultFailed'), [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('common.retry'), onPress: (): void => trigger('button') },

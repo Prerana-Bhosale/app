@@ -69,6 +69,7 @@
     "sosResultPartial": "Alert sent to {{sent}} contact(s). {{failed}} could not be sent — please call them directly.",
     "sosResultNoContacts": "No alert was sent: add an emergency contact with a valid mobile number, or call 112.",
     "sosResultFailed": "Failed to send emergency alert. Please call 112 immediately.",
+    "sosResultDraft": "SOS opened as a draft in your messaging app. Tap Send to confirm, or grant SMS permission in settings for automatic sending.",
     "addContactsWarning": "Add"
   },
   "auth": {

@@ -11,6 +11,7 @@ export interface SOSState {
 export interface SMSAlertResult {
   sent: string[];
   failed: string[];
+  isDraftFallback?: boolean;
 }
 
 export type SMSAlertType =
