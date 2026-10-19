@@ -13,7 +13,6 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { SafeScreen } from '@/components/ui/SafeScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Text } from '@/components/ui/Text';
-import { ENV } from '@/config/env';
 import { captureException } from '@/config/sentry';
 import { getRunningUpdateHash } from '@/config/updates';
 import { FALLBACK_APP_VERSION } from '@/constants/auth';
@@ -345,23 +344,6 @@ export default function SettingsScreen(): React.JSX.Element {
             <MaterialIcons name="chevron-right" size={20} color={COLORS.ERROR_RED} />
           </Pressable>
         </Card>
-
-        {ENV.APP_ENV === 'staging' && (
-          <Pressable
-            onPress={(): void => {
-              throw new Error('Sentry test error from Surakshak settings');
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={t('settings.testSentryError')}
-            className="mt-8 p-4"
-          >
-            <Text
-              variant="caption"
-              tKey="settings.testSentryError"
-              className="text-center text-stone"
-            />
-          </Pressable>
-        )}
       </SafeScreen>
 
       <DisguisePinModal

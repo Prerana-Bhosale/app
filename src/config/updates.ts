@@ -1,6 +1,7 @@
 import * as Updates from 'expo-updates';
 
 import { trackOtaUpdateApplied, trackOtaUpdateAvailable } from '@/services/analytics.service';
+import { metroLogger } from '@/utils/logger.utils';
 
 /**
  * Thin wrapper around `expo-updates` — screens/hooks never call the module
@@ -25,7 +26,11 @@ export async function checkForOtaUpdate(): Promise<OtaUpdateInfo> {
     trackOtaUpdateAvailable(updateId);
     return { isAvailable: true, updateId };
   } catch (error) {
-    console.error('checkForOtaUpdate failed:', error);
+    metroLogger.warn('checkForOtaUpdate failed', {
+      domain: 'SYSTEM',
+      operation: 'checkForOtaUpdate',
+      error,
+    });
     return { isAvailable: false, updateId: null };
   }
 }

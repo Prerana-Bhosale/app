@@ -33,7 +33,7 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'bg-primary-red border-2 border-transparent',
   secondary: 'bg-shakti-purple border-2 border-transparent',
   danger: 'bg-error-red border-2 border-transparent',
-  outline: 'bg-transparent border-2 border-shakti-purple',
+  outline: 'bg-transparent border-2 border-shakti-purple dark:border-purple-400',
   ghost: 'bg-transparent border-2 border-transparent',
 };
 
@@ -41,8 +41,8 @@ const VARIANT_TEXT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'text-white',
   secondary: 'text-white',
   danger: 'text-white',
-  outline: 'text-shakti-purple',
-  ghost: 'text-shakti-purple',
+  outline: 'text-shakti-purple dark:text-purple-300',
+  ghost: 'text-shakti-purple dark:text-purple-300',
 };
 
 const VARIANT_ICON_COLORS: Record<ButtonVariant, string> = {

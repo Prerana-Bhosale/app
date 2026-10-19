@@ -147,7 +147,6 @@
     "signOutConfirm": "क्या आप सच में साइन आउट करना चाहती हैं?",
     "deleteAccount": "अकाउंट हटाएं",
     "deleteAccountConfirm": "इससे आपका अकाउंट और सारा डेटा हमेशा के लिए हट जाएगा। यह वापस नहीं होगा।",
-    "testSentryError": "[स्टेजिंग] Sentry त्रुटि परीक्षण",
     "guestBanner": "सभी सुविधाओं के लिए साइन इन करें",
     "signInNow": "अभी साइन इन करें",
     "memberSince": "{{date}} से सदस्य"

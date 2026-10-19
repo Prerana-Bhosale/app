@@ -147,7 +147,6 @@
     "signOutConfirm": "Are you sure you want to sign out?",
     "deleteAccount": "Delete Account",
     "deleteAccountConfirm": "This will permanently delete your account. This cannot be undone.",
-    "testSentryError": "[STAGING] Test Sentry Error",
     "guestBanner": "Sign in to access all features",
     "signInNow": "Sign In Now",
     "memberSince": "Member since {{date}}"

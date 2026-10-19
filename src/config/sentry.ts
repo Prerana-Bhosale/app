@@ -21,7 +21,6 @@ export function scrubPhoneNumbers(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
 
 export function initSentry(): void {
   if (!IS_TELEMETRY_ENABLED) {
-    console.warn('[Sentry] Disabled in dev — errors will not be reported');
     return;
   }
 

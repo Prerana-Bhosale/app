@@ -6,7 +6,6 @@ let mixpanelInstance: Mixpanel | null = null;
 
 export async function initMixPanel(): Promise<void> {
   if (!IS_TELEMETRY_ENABLED) {
-    console.warn('[MixPanel] Disabled in dev — events will not be tracked');
     return;
   }
 

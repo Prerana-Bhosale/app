@@ -29,6 +29,7 @@ import {
 import { ROUTES } from '@/constants/routes';
 import { ICON_SIZE } from '@/constants/ui';
 import { useLocation } from '@/hooks/useLocation';
+import { useTheme } from '@/hooks/useTheme';
 import { trackUnsafeAreaReported, trackUnsafeAreaVoted } from '@/services/analytics.service';
 import {
   reportUnsafeArea,
@@ -65,6 +66,7 @@ export default function MapScreen(): React.JSX.Element {
   const userId = surakshakUser?.userId ?? rawUser?.uid ?? null;
 
   const { currentLocation, requestPermission } = useLocation();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
   const [unsafeAreas, setUnsafeAreas] = useState<UnsafeArea[]>([]);
@@ -232,14 +234,18 @@ export default function MapScreen(): React.JSX.Element {
           className="absolute inset-x-0 top-0"
         >
           <View className="flex-row items-center justify-between px-4 py-2">
-            <Text variant="h3" tKey="map.title" className="rounded-lg bg-white/90 px-3 py-1" />
+            <Text
+              variant="h3"
+              tKey="map.title"
+              className="rounded-lg border border-stone/20 bg-white/95 px-3 py-1 shadow-sm dark:border-dark-border dark:bg-charcoal/95"
+            />
             <Pressable
               onPress={() => setLegendVisible((current) => !current)}
               accessibilityRole="button"
               accessibilityLabel={t('map.legend')}
-              className="rounded-full bg-white/90 p-2"
+              className="rounded-full border border-stone/20 bg-white/95 p-2 shadow-sm dark:border-dark-border dark:bg-charcoal/95"
             >
-              <MaterialIcons name="info-outline" size={ICON_SIZE.ROW} color={COLORS.DEEP_INK} />
+              <MaterialIcons name="info-outline" size={ICON_SIZE.ROW} color={colors.textPrimary} />
             </Pressable>
           </View>
 

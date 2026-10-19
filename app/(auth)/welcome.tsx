@@ -39,7 +39,10 @@ export default function WelcomeScreen(): React.JSX.Element {
 
   return (
     <ErrorBoundary>
-      <SafeAreaView className="flex-1 bg-off-white" edges={['top', 'bottom', 'left', 'right']}>
+      <SafeAreaView
+        className="flex-1 bg-off-white dark:bg-near-black"
+        edges={['top', 'bottom', 'left', 'right']}
+      >
         <View className="px-4 pt-4">
           <OtaUpdateBanner />
         </View>
@@ -47,11 +50,19 @@ export default function WelcomeScreen(): React.JSX.Element {
         <View className="flex-1 items-center justify-center px-6">
           <MaterialIcons name="security" size={ICON_SIZE.BRAND} color={COLORS.PRIMARY_RED} />
           <Text variant="h1" tKey="home.title" className="mt-4" />
-          <Text variant="body" tKey="home.tagline" className="mt-2 text-stone" />
-          <Text variant="caption" tKey="auth.tagline" className="mt-1 text-stone" />
+          <Text
+            variant="body"
+            tKey="home.tagline"
+            className="mt-2 text-stone dark:text-dark-text-secondary"
+          />
+          <Text
+            variant="caption"
+            tKey="auth.tagline"
+            className="mt-1 text-stone dark:text-dark-text-secondary"
+          />
         </View>
 
-        <View className="rounded-t-3xl bg-white px-6 pb-10 pt-8">
+        <View className="rounded-t-3xl border-t border-stone/10 bg-white px-6 pb-10 pt-8 dark:border-dark-border dark:bg-charcoal">
           <Button
             variant="primary"
             size="lg"
@@ -70,7 +81,7 @@ export default function WelcomeScreen(): React.JSX.Element {
           <Text
             variant="caption"
             tKey="auth.guestWarning"
-            className="mt-4 px-4 text-center text-stone"
+            className="mt-4 px-4 text-center text-stone dark:text-dark-text-secondary"
           />
         </View>
       </SafeAreaView>

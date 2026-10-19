@@ -76,8 +76,8 @@ export default function LanguageSelectScreen(): React.JSX.Element {
               accessibilityRole="button"
               className={`mb-3 flex-row items-center rounded-2xl border p-4 ${
                 isCurrent
-                  ? 'border-2 border-shakti-purple bg-shakti-purple/10'
-                  : 'border-stone/20 bg-white'
+                  ? 'border-2 border-shakti-purple bg-shakti-purple/10 dark:bg-shakti-purple/20'
+                  : 'border-stone/20 bg-white dark:border-dark-border dark:bg-charcoal'
               }`}
             >
               <Text variant="h3" className="mr-3">
