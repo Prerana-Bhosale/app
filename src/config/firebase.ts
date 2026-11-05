@@ -1,6 +1,7 @@
 import { getApp } from '@react-native-firebase/app';
 import { getAuth } from '@react-native-firebase/auth';
 import { getFirestore } from '@react-native-firebase/firestore';
+import { getFunctions } from '@react-native-firebase/functions';
 import { getStorage } from '@react-native-firebase/storage';
 
 /**
@@ -21,4 +22,5 @@ const app = getApp();
 
 export const auth = getAuth(app);
 export const firestore = getFirestore(app);
+export const functions = getFunctions(app, 'asia-south1');
 export const storage = getStorage(app);

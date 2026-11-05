@@ -3,22 +3,20 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
   getDocs,
-  increment,
   limit,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   startAfter,
-  updateDoc,
   where,
   type Timestamp,
 } from '@react-native-firebase/firestore';
+import { httpsCallable } from '@react-native-firebase/functions';
 import { deleteObject, getDownloadURL, putFile, ref } from '@react-native-firebase/storage';
 
-import { firestore, storage } from '@/config/firebase';
+import { firestore, functions, storage } from '@/config/firebase';
 import { APP_CONFIG } from '@/constants/config';
 import type { CommunityPost, CreatePostInput } from '@/types/community.types';
 
@@ -194,20 +192,18 @@ export async function createPost(
 }
 
 /**
- * Increments a post's report count. The post auto-hides once reports reach
- * `COMMUNITY_REPORT_HIDE_THRESHOLD`; a hidden post drops out of every feed on
- * the next snapshot.
- * @phase Phase 5 — Community
+ * Submits a community report through the authenticated callable. The backend
+ * derives reporter identity and atomically records the report and moderation
+ * count, so the client cannot submit a reporter id or change moderation state.
+ * @phase Phase 5 - Community
  */
 export async function reportPost(postId: string): Promise<void> {
   try {
-    const snapshot = await getDoc(communityDoc(postId));
-    const data = snapshot.data() as Pick<CommunityPost, 'reportCount'> | undefined;
-    const next = (data?.reportCount ?? 0) + 1;
-    await updateDoc(communityDoc(postId), {
-      reportCount: increment(1),
-      isHidden: next >= APP_CONFIG.COMMUNITY_REPORT_HIDE_THRESHOLD,
-    });
+    const submitReport = httpsCallable<{ postId: string }, { accepted: boolean }>(
+      functions,
+      'reportCommunityPost',
+    );
+    await submitReport({ postId });
   } catch (error) {
     console.error('reportPost failed:', error);
     throw error;

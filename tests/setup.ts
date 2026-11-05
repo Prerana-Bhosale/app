@@ -27,6 +27,11 @@ jest.mock('@react-native-firebase/auth', () => ({
   deleteUser: jest.fn(() => Promise.resolve()),
 }));
 
+jest.mock('@react-native-firebase/functions', () => ({
+  getFunctions: jest.fn(() => ({})),
+  httpsCallable: jest.fn(() => jest.fn(() => Promise.resolve({ data: null }))),
+}));
+
 jest.mock('@react-native-firebase/firestore', () => ({
   getFirestore: jest.fn(() => ({})),
   doc: jest.fn(() => ({})),

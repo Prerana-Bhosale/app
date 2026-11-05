@@ -9,9 +9,9 @@ import {
   updateDoc,
   where,
 } from '@react-native-firebase/firestore';
+import { httpsCallable } from '@react-native-firebase/functions';
 import { deleteObject, getDownloadURL, putFile, ref } from '@react-native-firebase/storage';
 
-import { APP_CONFIG } from '@/constants/config';
 import {
   createPost,
   deletePost,
@@ -23,6 +23,11 @@ import {
   uploadPostImage,
 } from '@/services/firebase/community.service';
 import type { CreatePostInput } from '@/types/community.types';
+
+jest.mock('@react-native-firebase/functions', () => ({
+  getFunctions: jest.fn(() => ({})),
+  httpsCallable: jest.fn(() => jest.fn(() => Promise.resolve({ data: { accepted: true } }))),
+}));
 
 jest.mock('@react-native-firebase/firestore', () => ({
   getFirestore: jest.fn(() => ({})),
@@ -40,7 +45,6 @@ jest.mock('@react-native-firebase/firestore', () => ({
   startAfter: jest.fn((cursor: unknown) => ({ startAfter: cursor })),
   onSnapshot: jest.fn(() => jest.fn()),
   serverTimestamp: jest.fn(() => ({ __serverTimestamp: true })),
-  increment: jest.fn((n: number) => ({ __increment: n })),
 }));
 
 const NAMED_INPUT: CreatePostInput = {
@@ -50,12 +54,6 @@ const NAMED_INPUT: CreatePostInput = {
   city: 'Mumbai',
   state: 'MH',
 };
-
-const mockSnap = (data: unknown): unknown => ({
-  exists: () => data !== undefined,
-  id: 'post-1',
-  data: () => data,
-});
 
 describe('community.service', () => {
   let errorSpy: jest.SpyInstance;
@@ -107,41 +105,14 @@ describe('community.service', () => {
     expect(payload).toMatchObject({ locationUrl: 'https://maps/x', imageUrl: 'https://img/x' });
   });
 
-  it('reportPost increments and keeps the post visible below the threshold', async () => {
-    jest.mocked(getDoc).mockResolvedValueOnce(mockSnap({ reportCount: 1 }) as never);
-
+  it('reportPost invokes the authenticated callable with only the post id', async () => {
     await reportPost('post-1');
 
-    expect(updateDoc).toHaveBeenCalledWith(expect.anything(), {
-      reportCount: { __increment: 1 },
-      isHidden: false,
-    });
-  });
-
-  it('reportPost hides the post once reports reach the threshold', async () => {
-    jest
-      .mocked(getDoc)
-      .mockResolvedValueOnce(
-        mockSnap({ reportCount: APP_CONFIG.COMMUNITY_REPORT_HIDE_THRESHOLD - 1 }) as never,
-      );
-
-    await reportPost('post-1');
-
-    expect(updateDoc).toHaveBeenCalledWith(expect.anything(), {
-      reportCount: { __increment: 1 },
-      isHidden: true,
-    });
-  });
-
-  it('reportPost treats a missing document as zero reports', async () => {
-    jest.mocked(getDoc).mockResolvedValueOnce(mockSnap(undefined) as never);
-
-    await reportPost('post-1');
-
-    expect(updateDoc).toHaveBeenCalledWith(expect.anything(), {
-      reportCount: { __increment: 1 },
-      isHidden: false,
-    });
+    expect(httpsCallable).toHaveBeenCalledWith(expect.anything(), 'reportCommunityPost');
+    const submitReport = jest.mocked(httpsCallable).mock.results[0]?.value as jest.Mock;
+    expect(submitReport).toHaveBeenCalledWith({ postId: 'post-1' });
+    expect(getDoc).not.toHaveBeenCalled();
+    expect(updateDoc).not.toHaveBeenCalled();
   });
 
   it('uploadPostImage stores under community/{userId}/{timestamp}.jpg and returns the URL', async () => {
@@ -277,7 +248,11 @@ describe('community.service', () => {
     ['uploadPostImage', (): Promise<unknown> => uploadPostImage('u1', 'file:///x.jpg')],
   ])('%s logs and rethrows when the backend fails', async (_name, call) => {
     jest.mocked(addDoc).mockRejectedValueOnce(new Error('offline'));
-    jest.mocked(getDoc).mockRejectedValueOnce(new Error('offline'));
+    if (_name === 'reportPost') {
+      jest
+        .mocked(httpsCallable)
+        .mockReturnValueOnce(jest.fn().mockRejectedValue(new Error('offline')) as never);
+    }
     jest.mocked(getDocs).mockRejectedValueOnce(new Error('offline'));
     jest.mocked(putFile).mockRejectedValueOnce(new Error('offline') as never);
 
